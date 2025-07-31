@@ -1,35 +1,30 @@
-import { useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { HiOutlineHome, HiOutlineChartBar, HiOutlineCog, HiOutlinePaperClip, HiOutlineDocumentReport } from 'react-icons/hi';
-import { Link } from 'react-router-dom';
 
 export default function Menu() {
-  // Hook de estado para controlar qual item do menu está ativo
-  const [activeItem, setActiveItem] = useState('Dashboard');
+  // O hook useLocation nos dá acesso à URL atual.
+  const location = useLocation();
 
-  // Função para atualizar o item ativo ao ser clicado
-  const handleItemClick = (itemName) => {
-    setActiveItem(itemName);
-    // No futuro, você pode adicionar sua lógica de navegação aqui (ex: com React Router)
-  };
-
-  // Estrutura de dados para os itens do menu, facilitando a manutenção
+  // Estrutura de dados aprimorada com uma propriedade 'path' para cada rota.
+  // Isso evita problemas com espaços ou caracteres especiais nos nomes.
   const menuItems = [
-    { name: 'Anexar imagens', icon: <HiOutlinePaperClip size={20} /> },
+    { name: 'Anexar imagens', path: '/', icon: <HiOutlinePaperClip size={20} /> },
   ];
 
   const managementItems = [
-    { name: 'Dashboard', icon: <HiOutlineChartBar size={20} /> },
-    { name: 'Relatórios', icon: <HiOutlineDocumentReport size={20} /> },
-    { name: 'Configurações', icon: <HiOutlineCog size={20} /> },
+    // A rota para o Dashboard agora é a raiz do site ('/').
+    { name: 'Dashboard', path: '/dashboard', icon: <HiOutlineChartBar size={20} /> },
+    { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
+    { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
   ];
 
-  // Sub-componente para renderizar cada item do menu, evitando repetição de código
+  // O sub-componente agora usa o 'location.pathname' para determinar o link ativo.
   const MenuItem = ({ item }) => (
     <li>
       <Link
-        to={`/${item.name.toLowerCase()}`}
-        className={`menu-item ${activeItem === item.name ? 'active' : ''}`}
-        onClick={() => handleItemClick(item.name)}
+        to={item.path}
+        // A classe 'active' é aplicada se a URL atual corresponder ao caminho do item.
+        className={location.pathname === item.path ? 'active' : ''}
       >
         {item.icon}
         <span className="ml-2">{item.name}</span>
@@ -38,9 +33,7 @@ export default function Menu() {
   );
 
   return (
-    // O menu agora ocupa todo o espaço do seu container (o <aside>)
     <ul className="menu p-4 w-full h-full bg-base-200 text-base-content text-lg">
-      {/* Título/Logo do Menu */}
       <li className="menu-title text-xl font-bold mb-4 px-4">
         <span>Aycromo App</span>
       </li>
@@ -48,7 +41,6 @@ export default function Menu() {
       {/* Renderiza os itens do menu principal */}
       {menuItems.map(item => <MenuItem key={item.name} item={item} />)}
 
-      {/* Divisor para agrupar e organizar os itens */}
       <li className="menu-title mt-6">
         <span>Gerenciamento</span>
       </li>
