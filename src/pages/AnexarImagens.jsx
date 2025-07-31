@@ -29,8 +29,6 @@ export default function AnexarImagens() {
       <div className="p-4 border-t border-base-300 bg-base-100 flex-shrink-0">
         <button
           className="btn btn-primary w-full"
-          // O pai agora pode usar o estado para controlar o botão.
-          //disabled={selectedFiles.length > 0}
         >
           Processar {selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''} Imagens
         </button>
