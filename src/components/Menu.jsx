@@ -1,7 +1,6 @@
-// src/components/Menu.js
 import { useState } from 'react';
-// Importando os ícones desejados da biblioteca 'react-icons'
-import { HiOutlineHome, HiOutlineChartBar, HiOutlineCog, HiOutlineUserGroup, HiOutlineDocumentReport } from 'react-icons/hi';
+import { HiOutlineHome, HiOutlineChartBar, HiOutlineCog, HiOutlinePaperClip, HiOutlineDocumentReport } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 export default function Menu() {
   // Hook de estado para controlar qual item do menu está ativo
@@ -15,27 +14,26 @@ export default function Menu() {
 
   // Estrutura de dados para os itens do menu, facilitando a manutenção
   const menuItems = [
-    { name: 'Dashboard', icon: <HiOutlineHome size={20} /> },
-    { name: 'Analytics', icon: <HiOutlineChartBar size={20} /> },
+    { name: 'Anexar imagens', icon: <HiOutlinePaperClip size={20} /> },
   ];
 
   const managementItems = [
-    { name: 'Team', icon: <HiOutlineUserGroup size={20} /> },
-    { name: 'Reports', icon: <HiOutlineDocumentReport size={20} /> },
-    { name: 'Settings', icon: <HiOutlineCog size={20} /> },
+    { name: 'Dashboard', icon: <HiOutlineChartBar size={20} /> },
+    { name: 'Relatórios', icon: <HiOutlineDocumentReport size={20} /> },
+    { name: 'Configurações', icon: <HiOutlineCog size={20} /> },
   ];
 
   // Sub-componente para renderizar cada item do menu, evitando repetição de código
   const MenuItem = ({ item }) => (
     <li>
-      <a
-        // A classe 'active' do DaisyUI é aplicada condicionalmente
-        className={activeItem === item.name ? 'active' : ''}
+      <Link
+        to={`/${item.name.toLowerCase()}`}
+        className={`menu-item ${activeItem === item.name ? 'active' : ''}`}
         onClick={() => handleItemClick(item.name)}
       >
         {item.icon}
         <span className="ml-2">{item.name}</span>
-      </a>
+      </Link>
     </li>
   );
 
@@ -52,7 +50,7 @@ export default function Menu() {
 
       {/* Divisor para agrupar e organizar os itens */}
       <li className="menu-title mt-6">
-        <span>Management</span>
+        <span>Gerenciamento</span>
       </li>
 
       {/* Renderiza os itens da seção de gerenciamento */}

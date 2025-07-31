@@ -1,27 +1,26 @@
 import './index.css';
-import Button from './components/Button';
 import Menu from './components/Menu';
+import { Routes, Route } from 'react-router-dom';
+import AnexarImagens from './pages/AnexarImagens';
+import Dashboard from './pages/Dashboard';
+import Relatorios from './pages/Relatorios';
+import Configuracoes from './pages/Configuracoes';
 
 export default function App() {
   return (
-    <div className="flex h-screen">
-      <aside className="w-60 flex-shrink-0 bg-base-200 p-2">
+    <div className="flex h-screen bg-base-100">
+      <aside className="w-64 flex-shrink-0 bg-base-200">
         <Menu />
       </aside>
 
       <main className="flex-1 p-10 overflow-y-auto">
-        <h1 className="text-4xl font-bold">Hello World!</h1>
-        <p className="mt-4 mb-8">
-          Seu conteúdo principal ficará aqui, à direita do menu.
-        </p>
-        <Button>Click me</Button>
-
-        {/* Adicione mais conteúdo aqui para testar a rolagem */}
-        <div className="h-[2000px] bg-base-300 rounded-box flex items-center justify-center">
-          <p>Conteúdo longo para teste de rolagem</p>
-        </div>
+        <Routes>
+          <Route path="/" element={<AnexarImagens />} index/>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
+        </Routes>
       </main>
-
     </div>
   );
 }
