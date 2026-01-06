@@ -1,11 +1,17 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import fs from 'node:fs';
+import { spawn } from 'child_process';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
+
+// Descomente a linha abaixo para corrigir erros de "SharedImageManager" ou "GPU" no macOS,
+// caso esteja notando falhas visuais ou queira limpar o console.
+// app.disableHardwareAcceleration();
 
 const createWindow = () => {
   // Create the browser window.
@@ -25,8 +31,54 @@ const createWindow = () => {
   }
 
   // Open the DevTools.
+  // Os erros de "Autofill" no terminal ocorrem porque o DevTools abre automaticamente aqui.
   mainWindow.webContents.openDevTools();
 };
+
+// --- Lógica para Importação de Modelos de IA ---
+ipcMain.handle('import-model', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Selecionar Modelo de Visão (YOLO)',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Modelos de IA', extensions: ['onnx', 'pt', 'engine'] }
+    ]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  const filePath = result.filePaths[0];
+  const fileName = path.basename(filePath);
+  
+  return { name: fileName, path: filePath };
+});
+
+ipcMain.handle('run-inference', async (event, data) => {
+  const { modeloPath, imagens } = data;
+
+  return new Promise((resolve, reject) => {
+    // Exemplo chamando um script Python externo
+    // Você passaria o caminho do modelo e os caminhos das imagens como argumentos
+    const pythonProcess = spawn('python', [
+      path.join(__dirname, 'scripts/detect_chromosomes.py'),
+      modeloPath,
+      ...imagens
+    ]);
+
+    let result = "";
+    pythonProcess.stdout.on('data', (data) => result += data.toString());
+    
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve(JSON.parse(result)); // O Python deve retornar um JSON com as coordenadas
+      } else {
+        reject("Erro na execução do modelo");
+      }
+    });
+  });
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -54,3 +106,5 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
+
