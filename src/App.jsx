@@ -5,6 +5,7 @@ import AnexarImagens from './pages/AnexarImagens';
 import Dashboard from './pages/Dashboard';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
+import Benchmark from './pages/Benchmark';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/benchmark" element={<Benchmark />} />
         </Routes>
       </main>
     </div>

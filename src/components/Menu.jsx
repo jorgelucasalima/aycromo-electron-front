@@ -40,8 +40,9 @@ export default function Menu() {
   ];
 
   const managementItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: <HiOutlineChartBar size={20} /> },
+    // { name: 'Dashboard', path: '/dashboard', icon: <HiOutlineChartBar size={20} /> },
     { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
+    { name: 'Benchmark', path: '/benchmark', icon: <HiOutlineChartBar size={20} /> },
     { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
   ];
 
