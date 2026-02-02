@@ -1,41 +1,38 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import fs from 'node:fs';
 import { spawn } from 'child_process';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+// Impede múltiplas instâncias durante a instalação no Windows
 if (started) {
   app.quit();
 }
 
-// Descomente a linha abaixo para corrigir erros de "SharedImageManager" ou "GPU" no macOS,
-// caso esteja notando falhas visuais ou queira limpar o console.
-// app.disableHardwareAcceleration();
-
 const createWindow = () => {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1000,
+    height: 800,
     webPreferences: {
+      // Garante que o preload seja carregado corretamente via Vite
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
-  // Open the DevTools.
-  // Os erros de "Autofill" no terminal ocorrem porque o DevTools abre automaticamente aqui.
-  mainWindow.webContents.openDevTools();
+  // Abre o DevTools automaticamente para debug (opcional)
+  // mainWindow.webContents.openDevTools();
 };
 
-// --- Lógica para Importação de Modelos de IA ---
+// --- LÓGICA DE INTERFACE (IPC) ---
+
+/**
+ * 1. Importação de Arquivos de Modelo (.onnx, .pt)
+ */
 ipcMain.handle('import-model', async () => {
   const result = await dialog.showOpenDialog({
     title: 'Selecionar Modelo de Visão (YOLO)',
@@ -45,49 +42,90 @@ ipcMain.handle('import-model', async () => {
     ]
   });
 
-  if (result.canceled || result.filePaths.length === 0) {
-    return null;
-  }
+  if (result.canceled || result.filePaths.length === 0) return null;
 
-  const filePath = result.filePaths[0];
-  const fileName = path.basename(filePath);
-  
-  return { name: fileName, path: filePath };
+  return { 
+    name: path.basename(result.filePaths[0]), 
+    path: result.filePaths[0] 
+  };
 });
 
+/**
+ * 2. Importação de Pastas de Dataset
+ */
+ipcMain.handle('import-dataset', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Selecionar Pasta do Dataset',
+    properties: ['openDirectory'], // Define que apenas pastas podem ser selecionadas
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+
+  return { 
+    name: path.basename(result.filePaths[0]), 
+    path: result.filePaths[0] 
+  };
+});
+
+/**
+ * 3. Execução da Inferência com Python
+ * Resolve o erro ENOENT detectando o comando correto e capturando erros de log.
+ */
 ipcMain.handle('run-inference', async (event, data) => {
   const { modeloPath, imagens } = data;
 
+  // Detecta se usa 'python' (Windows) ou 'python3' (Mac/Linux)
+  const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+  
+  // Localiza o script dentro da pasta do projeto
+  const scriptPath = path.join(app.getAppPath(), 'src/scripts/detect_chromosomes.py');
+
   return new Promise((resolve, reject) => {
-    // Exemplo chamando um script Python externo
-    // Você passaria o caminho do modelo e os caminhos das imagens como argumentos
-    const pythonProcess = spawn('python', [
-      path.join(__dirname, 'scripts/detect_chromosomes.py'),
+    const pythonProcess = spawn(pythonCommand, [
+      scriptPath,
       modeloPath,
       ...imagens
-    ]);
+    ], { shell: true }); // shell: true ajuda a encontrar o executável no Windows
 
-    let result = "";
-    pythonProcess.stdout.on('data', (data) => result += data.toString());
-    
+    let stdoutData = "";
+    let stderrData = "";
+
+    pythonProcess.stdout.on('data', (data) => {
+      stdoutData += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      stderrData += data.toString();
+      console.error(`[Python Error]: ${data}`);
+    });
+
     pythonProcess.on('close', (code) => {
       if (code === 0) {
-        resolve(JSON.parse(result)); // O Python deve retornar um JSON com as coordenadas
+        try {
+          resolve(JSON.parse(stdoutData));
+        } catch (err) {
+          reject(`Saída do Python inválida: ${stdoutData}`);
+        }
       } else {
-        reject("Erro na execução do modelo");
+        reject(`Erro no script (Código ${code}): ${stderrData}`);
+      }
+    });
+
+    pythonProcess.on('error', (err) => {
+      if (err.code === 'ENOENT') {
+        reject(`Comando '${pythonCommand}' não encontrado. Verifique se o Python está no PATH.`);
+      } else {
+        reject(`Falha ao iniciar o processo: ${err.message}`);
       }
     });
   });
 });
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+// --- CICLO DE VIDA DO APP ---
+
 app.whenReady().then(() => {
   createWindow();
 
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -95,16 +133,8 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
-
-

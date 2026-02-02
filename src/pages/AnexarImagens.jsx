@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import InputFile from '../components/InputFile'; 
+import InputFile from '../components/InputFile';
 
-export default function AnexarImagens() {
+export default function AnexarImagens({ onNavegar }) { // Recebe função para mudar de tela
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -16,59 +16,84 @@ export default function AnexarImagens() {
 
   const handleProcessar = async () => {
     if (selectedFiles.length === 0) return;
-
     setIsProcessing(true);
 
-    // 1. Pegar o modelo ativo e a lista de modelos do localStorage
     const idAtivo = localStorage.getItem('modelo_ativo') || 'yolo-v11';
     const modelosSalvos = JSON.parse(localStorage.getItem('modelos_ia') || '[]');
     
-    // 2. Encontrar o caminho real do modelo
-    let caminhoModelo = 'default'; // O Electron saberá onde está o padrão
+    let caminhoModelo = 'default';
+    let nomeModelo = 'YOLO v11 (Padrão)';
+
     if (idAtivo !== 'yolo-v11') {
       const mod = modelosSalvos.find(m => m.id === idAtivo);
-      if (mod) caminhoModelo = mod.path;
+      if (mod) {
+        caminhoModelo = mod.path;
+        nomeModelo = mod.name;
+      }
     }
 
-    // 3. Preparar os caminhos das imagens (o Electron precisa do path absoluto)
     const caminhosImagens = selectedFiles.map(file => file.path);
 
     try {
-      // 4. Chamar o Electron para processar
+      // Chamada para o Electron
       const resultados = await window.electronAPI.runInference({
         modeloPath: caminhoModelo,
         imagens: caminhosImagens
       });
 
-      console.log("Cromossomos identificados:", resultados);
-      alert("Processamento concluído!");
+      // --- SALVAR NO HISTÓRICO PARA O RELATÓRIO ---
+      const novoRelatorio = {
+        id: Date.now(),
+        data: new Date().toLocaleString(),
+        modelo: nomeModelo,
+        totalImagens: selectedFiles.length,
+        detalhes: resultados // O JSON retornado pelo Python
+      };
+
+      const historicoExistente = JSON.parse(localStorage.getItem('historico_aycromo') || '[]');
+      localStorage.setItem('historico_aycromo', JSON.stringify([novoRelatorio, ...historicoExistente]));
+
+      // Limpa e Redireciona
+      setSelectedFiles([]);
+      onNavegar('relatorios'); // Função que você deve ter no App.js para trocar a tela
       
     } catch (error) {
       console.error("Erro no processamento:", error);
-      alert("Erro ao processar imagens.");
+      alert("Erro ao processar: Verifique se o Python está configurado corretamente.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto p-6">
-        <h1 className="text-4xl font-bold mb-8 text-gray-800 dark:text-white">Anexar Imagens</h1>
+    <div className="flex flex-col h-full p-6">
+      <h1 className="text-4xl font-bold mb-8 text-gray-800">Anexar Imagens</h1>
+      
+      <div className="flex-grow">
         <InputFile
           selectedFiles={selectedFiles}
           onFileChange={handleFileChange}
           onRemoveImage={handleRemoveImage}
+          disabled={isProcessing}
         />
       </div>
 
-      <div className="p-4 border-t border-base-300 bg-base-100 flex-shrink-0">
+      {/* MODAL DE LOADING OVERLAY */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center text-white">
+          <div className="loading loading-spinner loading-lg text-primary"></div>
+          <p className="mt-4 text-xl font-bold animate-pulse">Identificando Cromossomos...</p>
+          <p className="text-sm text-gray-300">O modelo YOLO está processando o lote.</p>
+        </div>
+      )}
+
+      <div className="mt-6">
         <button
           onClick={handleProcessar}
           disabled={selectedFiles.length === 0 || isProcessing}
-          className={`btn btn-primary w-full ${isProcessing ? 'loading' : ''}`}
+          className="btn btn-primary w-full shadow-lg"
         >
-          {isProcessing ? 'Processando IA...' : `Processar ${selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''} Imagens`}
+          {isProcessing ? 'Aguarde...' : `Processar ${selectedFiles.length} Imagens`}
         </button>
       </div>
     </div>
