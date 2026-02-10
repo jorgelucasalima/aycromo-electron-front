@@ -8,12 +8,6 @@ const DATASETS_ESTATICOS = [
     path: 'assets/test/yolo', 
     type: 'local' 
   },
-  { 
-    id: 'ds-kaggle', 
-    name: 'Kaggle: Cromossomos', 
-    path: 'https://www.kaggle.com/datasets/jorgelucaslima/dataset-cromossomo', 
-    type: 'remote' 
-  }
 ];
 
 export default function Configuracoes() {

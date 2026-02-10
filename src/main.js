@@ -13,7 +13,7 @@ if (started) {
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
-    width: 1100,
+    width: 1200,
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -70,6 +70,7 @@ ipcMain.handle('import-dataset', async () => {
 
 /**
  * 3. Gerenciador de Inferência Híbrido (Python ou ONNX)
+ * Usado na tela de "Laboratório de Análise" para detecção visual (bounding boxes)
  */
 ipcMain.handle('run-inference', async (event, data) => {
   const { modeloPath, imagens } = data;
@@ -96,50 +97,38 @@ ipcMain.handle('run-inference', async (event, data) => {
   }
 });
 
+/**
+ * 4. Listagem de Arquivos (Imagens)
+ */
 ipcMain.handle('list-files', async (event, relativePath) => {
-  // 1. Limpa o caminho recebido
-  const cleanPath = relativePath.replace(/^\/|^\\/, ''); // Remove barras iniciais
+  const cleanPath = relativePath.replace(/^\/|^\\/, ''); 
   
-  // 2. Define onde procurar (A ordem importa!)
   const searchPaths = [
-    // Opção A: Dentro de 'public' (Modo Desenvolvimento)
     path.join(process.cwd(), 'public', cleanPath),
-    
-    // Opção B: Dentro da raiz do app (Modo Produção/Build)
     path.join(app.getAppPath(), cleanPath),
-    
-    // Opção C: Tenta 'public' dentro do app path (Caso específico de alguns builds Vite)
     path.join(app.getAppPath(), 'public', cleanPath)
   ];
 
   console.log(`[ListFiles] Procurando pasta '${cleanPath}' em:`);
   
-  // 3. Procura o primeiro caminho que existe de verdade
   let foundPath = null;
   for (const p of searchPaths) {
-    const exists = fs.existsSync(p);
-    console.log(` - ${p} : ${exists ? 'ENCONTRADO ✅' : 'Não existe ❌'}`);
-    
-    if (exists) {
+    if (fs.existsSync(p)) {
       foundPath = p;
       break;
     }
   }
 
-  // 4. Se não achou em lugar nenhum, retorna erro
   if (!foundPath) {
-    console.error(`[ListFiles] ERRO FATAL: Pasta não encontrada em nenhum dos locais.`);
+    console.error(`[ListFiles] ERRO: Pasta não encontrada.`);
     return [];
   }
 
-  // 5. Lê os arquivos do caminho encontrado
   try {
     const files = fs.readdirSync(foundPath);
     const images = files
       .filter(file => /\.(jpg|jpeg|png|bmp|webp)$/i.test(file))
       .map(file => path.join(foundPath, file));
-
-    console.log(`[ListFiles] Sucesso! ${images.length} imagens encontradas em ${foundPath}`);
     return images;
   } catch (e) {
     console.error(`[ListFiles] Erro ao ler diretório: ${e.message}`);
@@ -147,13 +136,69 @@ ipcMain.handle('list-files', async (event, relativePath) => {
   }
 });
 
-// --- MOTOR 1: PYTHON (Para arquivos .pt) ---
+/**
+ * 5. BENCHMARK METRICS (FALTAVA ISSO AQUI!)
+ * Calcula mAP, Precision e Recall usando benchmark.py
+ */
+ipcMain.handle('run-benchmark-metrics', async (event, data) => {
+  const { modeloPath, datasetPath } = data;
+  
+  const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+  const scriptPath = path.join(app.getAppPath(), 'src/scripts/benchmark.py');
+
+  console.log(`[Benchmark] Iniciando teste...`);
+  console.log(` - Modelo: ${modeloPath}`);
+  console.log(` - Dataset: ${datasetPath}`);
+
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn(pythonCommand, [
+      scriptPath,
+      modeloPath,
+      datasetPath
+    ], { shell: true });
+
+    let stdoutData = "";
+    let stderrData = "";
+
+    pythonProcess.stdout.on('data', (d) => stdoutData += d.toString());
+    pythonProcess.stderr.on('data', (d) => stderrData += d.toString());
+
+    pythonProcess.on('close', (code) => {
+      // Procura o início do JSON na saída (pode haver logs antes)
+      const jsonStartIndex = stdoutData.indexOf('{');
+      
+      if (code === 0 && jsonStartIndex !== -1) {
+        try {
+          const jsonString = stdoutData.substring(jsonStartIndex);
+          const metrics = JSON.parse(jsonString);
+          console.log("[Benchmark] Sucesso:", metrics);
+          resolve(metrics);
+        } catch (err) {
+          console.error("[Benchmark] Erro ao ler JSON:", stdoutData);
+          reject(`Falha ao processar resposta do Python.`);
+        }
+      } else {
+        console.error("[Benchmark] Falha no script:", stderrData);
+        // Retornamos um objeto de erro "suave" para o React tratar sem travar
+        resolve({ 
+          error: `Erro no script (Código ${code}). Verifique se 'ultralytics' está instalado e se a pasta 'labels' existe ao lado da pasta 'images'.` 
+        });
+      }
+    });
+
+    pythonProcess.on('error', (err) => {
+      reject(`Falha ao iniciar Python: ${err.message}`);
+    });
+  });
+});
+
+
+// --- FUNÇÕES AUXILIARES (MOTORES DE IA) ---
+
+// MOTOR 1: PYTHON (Para arquivos .pt)
 function runPythonInference(modeloPath, imagens) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-    
-    // Caminho do script dentro da pasta src/scripts
-    // Use app.getAppPath() para garantir que funcione após o build
     const scriptPath = path.join(app.getAppPath(), 'src/scripts/detect_chromosomes.py');
 
     const pythonProcess = spawn(pythonCommand, [
@@ -171,12 +216,16 @@ function runPythonInference(modeloPath, imagens) {
     pythonProcess.on('close', (code) => {
       if (code === 0) {
         try {
-          // Tenta limpar logs extras que podem ter vindo antes do JSON
-          const jsonStr = stdoutData.substring(stdoutData.indexOf('{')); 
-          resolve(JSON.parse(jsonStr));
+          const jsonStartIndex = stdoutData.indexOf('{');
+          if (jsonStartIndex !== -1) {
+             const jsonStr = stdoutData.substring(jsonStartIndex); 
+             resolve(JSON.parse(jsonStr));
+          } else {
+             reject("Resposta vazia do Python (Nenhum JSON encontrado).");
+          }
         } catch (err) {
           console.error("Falha ao parsear JSON do Python:", stdoutData);
-          reject(`Saída inválida do Python. Verifique se o ultralytics está instalado.`);
+          reject(`Saída inválida do Python.`);
         }
       } else {
         reject(`Erro no script Python (Código ${code}): ${stderrData}`);
@@ -184,95 +233,75 @@ function runPythonInference(modeloPath, imagens) {
     });
 
     pythonProcess.on('error', (err) => {
-      if (err.code === 'ENOENT') {
-        reject(`Python não encontrado. Instale o Python e adicione ao PATH.`);
-      } else {
-        reject(err.message);
-      }
+       reject(err.message);
     });
   });
 }
 
-// --- MOTOR 2: ONNX (Para arquivos .onnx - Sem dependência externa) ---
+// MOTOR 2: ONNX (Para arquivos .onnx)
 async function runOnnxInference(modeloPath, imagens) {
   try {
-    // 1. Carrega o modelo na memória
     const session = await InferenceSession.create(modeloPath);
     const resultados = {};
 
     for (const imgPath of imagens) {
-      // 2. Prepara a imagem (Resize 640x640 + Normalização)
+      // Prepara imagem com Sharp
       const { data } = await sharp(imgPath)
-        .resize(640, 640, { fit: 'fill' }) // Força 640x640 ignorando aspect ratio (padrão YOLO)
-        .removeAlpha() // Garante que seja RGB (3 canais), remove transparência
+        .resize(640, 640, { fit: 'fill' })
+        .removeAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-      // Converter Uint8 (0-255) para Float32 (0.0-1.0)
       const inputData = new Float32Array(data.length);
       for (let i = 0; i < data.length; i++) {
         inputData[i] = data[i] / 255.0;
       }
 
-      // Cria o Tensor [1, 3, 640, 640]
       const tensor = new Tensor('float32', inputData, [1, 3, 640, 640]);
-
-      // 3. Executa a inferência
       const output = await session.run({ [session.inputNames[0]]: tensor });
-      
-      // Pega a saída bruta (output0)
       const outputTensor = output[session.outputNames[0]];
 
-      // 4. Pós-processamento (Decodifica a matriz confusa do YOLO em contagem)
-      const detections = postProcessYOLO(outputTensor, 0.5); // 0.5 é a confiança mínima (50%)
+      const detections = postProcessYOLO(outputTensor, 0.5);
+
+      const details = detections.map(d => ({
+        x: d.bbox[0], y: d.bbox[1], w: d.bbox[2], h: d.bbox[3]
+      }));
 
       resultados[imgPath] = {
         count: detections.length,
         status: "Sucesso (ONNX)",
-        details: detections // Opcional: coordenadas das caixas
+        details: details 
       };
     }
-
     return resultados;
-
   } catch (error) {
     console.error("Erro no ONNX Runtime:", error);
     throw new Error(`Falha no processamento ONNX: ${error.message}`);
   }
 }
 
-// --- LÓGICA MATEMÁTICA DO ONNX (NMS & IoU) ---
+// --- MATEMÁTICA ONNX ---
 
 function postProcessYOLO(outputTensor, threshold) {
   const data = outputTensor.data;
-  // O formato de saída do YOLOv8 exportado costuma ser [1, 5, 8400]
-  // 5 canais = [center_x, center_y, width, height, class_score]
-  const rows = outputTensor.dims[1]; // 5
   const cols = outputTensor.dims[2]; // 8400
-
   const boxes = [];
 
   for (let i = 0; i < cols; i++) {
-    // Acessa o score de confiança (índice 4)
     const score = data[4 * cols + i]; 
-
     if (score > threshold) {
       const xc = data[0 * cols + i];
       const yc = data[1 * cols + i];
       const w = data[2 * cols + i];
       const h = data[3 * cols + i];
 
-      const x1 = xc - w / 2;
-      const y1 = yc - h / 2;
-
       boxes.push({
-        bbox: [x1, y1, w, h],
+        bbox: [xc - w / 2, yc - h / 2, w, h],
         score: score
       });
     }
   }
-
-  return applyNMS(boxes, 0.45); // Remove sobreposições com IoU > 45%
+  return applyNMS(boxes, 0.45);
 }
 
 function applyNMS(boxes, iouThreshold) {
@@ -296,7 +325,7 @@ function iou(box1, box2) {
   return intersection / union;
 }
 
-// --- CICLO DE VIDA ---
+// --- APP LIFECYCLE ---
 
 app.whenReady().then(() => {
   createWindow();

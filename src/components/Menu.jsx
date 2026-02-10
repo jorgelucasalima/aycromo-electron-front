@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineCog, HiOutlinePaperClip, HiOutlineDocumentReport, HiOutlineChip } from 'react-icons/hi';
+import { HiOutlineCog , HiOutlinePaperClip, HiOutlineChip } from 'react-icons/hi';
+import { FaUncharted } from "react-icons/fa6";
+import { LuChartSpline } from "react-icons/lu";
 
 export default function Menu() {
   const location = useLocation();
@@ -10,7 +12,7 @@ export default function Menu() {
   const atualizarModeloAtivo = () => {
     const modelosSalvos = JSON.parse(localStorage.getItem('modelos_ia') || '[]');
     const idAtivo = localStorage.getItem('modelo_ativo');
-    
+
     if (idAtivo === 'yolo-v11' || !idAtivo) {
       setModeloNome('YOLO v11 (Padrão)');
     } else {
@@ -25,7 +27,7 @@ export default function Menu() {
 
     // Listener para detectar mudanças no localStorage vindas do componente de Configurações
     window.addEventListener('storage', atualizarModeloAtivo);
-    
+
     // Custom listener para mudanças na mesma aba
     window.addEventListener('modeloAlterado', atualizarModeloAtivo);
 
@@ -41,9 +43,10 @@ export default function Menu() {
 
   const managementItems = [
     // { name: 'Dashboard', path: '/dashboard', icon: <HiOutlineChartBar size={20} /> },
-    { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
-    { name: 'Benchmark', path: '/benchmark', icon: <HiOutlineChartBar size={20} /> },
-    { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
+    // { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
+    { name: 'Análise de IA', path: '/analise', icon: <FaUncharted size={20} /> },
+    { name: 'Benchmark', path: '/benchmark', icon: <LuChartSpline size={20} /> },
+    // { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
   ];
 
   const MenuItem = ({ item }) => (
@@ -65,11 +68,7 @@ export default function Menu() {
           <span>Aycromo App</span>
         </li>
 
-        {menuItems.map(item => <MenuItem key={item.name} item={item} />)}
-
-        <li className="menu-title mt-6">
-          <span>Gerenciamento</span>
-        </li>
+        {/* {menuItems.map(item => <MenuItem key={item.name} item={item} />)} */}
 
         {managementItems.map(item => <MenuItem key={item.name} item={item} />)}
       </ul>

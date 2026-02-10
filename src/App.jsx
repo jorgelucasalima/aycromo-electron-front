@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 import Benchmark from './pages/Benchmark';
+import AnaliseCuradoria from './pages/Analise';
 
 export default function App() {
   return (
@@ -16,11 +17,12 @@ export default function App() {
 
       <main className="flex-1 p-10 overflow-y-auto">
         <Routes>
-          <Route path="/" element={<AnexarImagens />} index/>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/relatorios" element={<Relatorios />} />
+          {/* <Route path="/" element={<AnexarImagens />} index/> */}
+          {/* <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/relatorios" element={<Relatorios />} /> */}
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/benchmark" element={<Benchmark />} />
+          <Route path='analise' element={<AnaliseCuradoria />} />
         </Routes>
       </main>
     </div>

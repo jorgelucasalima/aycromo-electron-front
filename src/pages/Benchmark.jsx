@@ -1,234 +1,170 @@
 import React, { useState, useEffect } from 'react';
 
-// --- CONFIGURAÇÃO DOS DATASETS FIXOS ---
-// Certifique-se de mover sua pasta de imagens para a pasta 'public' do projeto
-// Estrutura recomendada: aycromo/public/datasets/yolo/images
+// Datasets Fixos
 const DATASETS_ESTATICOS = [
-  { 
-    id: 'ds-interno-yolo', 
-    name: 'Dataset Interno (YOLO Test)', 
-    // O caminho agora aponta para a raiz pública (onde o Electron busca arquivos estáticos)
-    path: 'datasets/yolo/images', 
-    type: 'local' 
-  },
-  { 
-    id: 'ds-kaggle', 
-    name: 'Kaggle: Cromossomos', 
-    path: 'https://www.kaggle.com/datasets/jorgelucaslima/dataset-cromossomo', 
-    type: 'remote' 
-  }
+  { id: 'ds-interno', name: 'Dataset Interno (Padrão)', path: 'datasets/yolo/images', type: 'local' },
 ];
 
 export default function Benchmark() {
-  const [config, setConfig] = useState({ model: null, dataset: null });
-  const [status, setStatus] = useState('idle'); 
+  // --- ESTADOS DE CONFIGURAÇÃO ---
+  const [modelos, setModelos] = useState([{ id: 'yolo-base', name: 'YOLO v11 (Base)', path: 'yolo11n.pt', framework: 'YOLO' }]);
+  const [datasets, setDatasets] = useState(DATASETS_ESTATICOS);
+  const [datasetAtivo, setDatasetAtivo] = useState(DATASETS_ESTATICOS[0]);
+  
+  // --- ESTADOS DO BENCHMARK ---
+  const [resultados, setResultados] = useState([]);
+  const [processing, setProcessing] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [metrics, setMetrics] = useState(null);
-  const [progress, setProgress] = useState(0);
 
-  // 1. Carrega as configurações ativas e resolve os nomes corretos
   useEffect(() => {
-    // --- CARREGAR MODELO ---
-    const idModelo = localStorage.getItem('modelo_ativo') || 'yolo-v11';
-    const listaModelos = JSON.parse(localStorage.getItem('modelos_ia') || '[]');
+    // Carregar dados salvos
+    const mSalvos = JSON.parse(localStorage.getItem('modelos_ia') || '[]');
+    const dSalvos = JSON.parse(localStorage.getItem('datasets_ia') || '[]');
     
-    // Adiciona o modelo padrão na busca caso não esteja no localStorage
-    const todosModelos = [...listaModelos, { id: 'yolo-v11', name: 'YOLO v11 (Padrão)', path: 'default', framework: 'YOLO' }];
-    const modelo = todosModelos.find(m => m.id === idModelo);
-
-    // --- CARREGAR DATASET ---
-    const idDataset = localStorage.getItem('dataset_ativo') || 'ds-interno-yolo';
-    const listaDatasets = JSON.parse(localStorage.getItem('datasets_ia') || '[]');
-    
-    // Mescla os estáticos com os salvos para poder encontrar o dataset padrão
-    const todosDatasets = [...DATASETS_ESTATICOS, ...listaDatasets];
-    const dataset = todosDatasets.find(d => d.id === idDataset);
-
-    setConfig({ 
-      model: modelo || { name: 'Desconhecido', path: '' }, 
-      dataset: dataset || { name: 'Desconhecido', path: '', type: 'local' } 
-    });
+    // Mesclar com padrões
+    setModelos(prev => [...prev.filter(p => p.path !== 'yolo11n.pt'), ...mSalvos]);
+    setDatasets([...DATASETS_ESTATICOS, ...dSalvos]);
   }, []);
 
-  const addLog = (msg) => setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-
-  const runBenchmark = async () => {
-    if (!config.model || !config.dataset) return;
-    
-    // Validação de Dataset Remoto
-    if (config.dataset.type === 'remote') {
-      alert("O Benchmark requer acesso direto aos arquivos locais para medir a velocidade real. Por favor, selecione o Dataset Interno ou outro dataset local.");
-      return;
-    }
-
-    setStatus('loading');
-    setMetrics(null);
-    setLogs([]);
-    setProgress(10);
-    
-    try {
-      addLog(`Iniciando Benchmark...`);
-      addLog(`Modelo: ${config.model.name}`);
-      addLog(`Dataset: ${config.dataset.name}`);
-
-      // 1. Listar arquivos
-      addLog(`Escaneando pasta: ${config.dataset.path}`);
-      
-      // Chama o Electron para ler a pasta
-      const imagens = await window.electronAPI.listFiles(config.dataset.path);
-      
-      if (!imagens || imagens.length === 0) {
-        throw new Error(`Nenhuma imagem encontrada em: ${config.dataset.path}. Verifique se a pasta existe dentro de 'public'.`);
-      }
-      
-      addLog(`Encontradas ${imagens.length} imagens para teste.`);
-      setProgress(30);
-
-      // 2. Iniciar Cronômetro
-      const startTime = performance.now();
-
-      // 3. Executar Inferência
-      addLog(`Enviando lote para processamento... aguarde.`);
-      const resultados = await window.electronAPI.runInference({
-        modeloPath: config.model.path,
-        imagens: imagens
-      });
-
-      // 4. Parar Cronômetro e Calcular
-      const endTime = performance.now();
-      const totalTimeMs = endTime - startTime;
-      const totalTimeSec = totalTimeMs / 1000;
-      
-      setProgress(100);
-
-      // Cálculos
-      const totalImages = Object.keys(resultados).length;
-      const fps = totalImages / totalTimeSec;
-      const avgTimePerImage = totalTimeMs / totalImages;
-
-      // Contagem total de cromossomos detectados
-      let totalCromossomos = 0;
-      Object.values(resultados).forEach(r => totalCromossomos += (r.count || 0));
-
-      setMetrics({
-        totalImages,
-        totalTime: totalTimeSec.toFixed(2),
-        fps: fps.toFixed(1),
-        avgTime: avgTimePerImage.toFixed(0), // ms
-        totalDetections: totalCromossomos
-      });
-
-      addLog(`Sucesso! Processamento finalizado.`);
-      setStatus('success');
-
-    } catch (error) {
-      console.error(error);
-      addLog(`ERRO: ${error.message || error}`);
-      setStatus('error');
-      setProgress(0);
+  // --- FUNÇÕES DE CONFIGURAÇÃO (Simplificadas para brevidade) ---
+  const importarModelo = async () => {
+    const novo = await window.electronAPI.importModel();
+    if(novo) {
+      const novaLista = [...modelos, { ...novo, id: Date.now().toString(), framework: 'YOLO' }];
+      setModelos(novaLista);
+      localStorage.setItem('modelos_ia', JSON.stringify(novaLista.filter(m => m.path !== 'yolo11n.pt')));
     }
   };
 
+  const importarDataset = async () => {
+    const novo = await window.electronAPI.importDataset();
+    if(novo) {
+      const novaLista = [...datasets, { ...novo, id: Date.now().toString(), type: 'local' }];
+      setDatasets(novaLista); // Salvar no localStorage...
+    }
+  };
+
+  // --- FUNÇÃO DO BENCHMARK (Comparativo) ---
+  const rodarComparativo = async () => {
+    if (datasetAtivo.type === 'remote') return alert("Use um dataset local com pasta /labels.");
+    
+    setProcessing(true);
+    setResultados([]);
+    setLogs([]);
+
+    for (const modelo of modelos) {
+      try {
+        setLogs(prev => [...prev, `Testando ${modelo.name}...`]);
+        
+        // Chama o script benchmark.py que criamos anteriormente
+        const metricas = await window.electronAPI.runBenchmarkMetrics({
+            modeloPath: modelo.path === 'default' ? 'yolo11n.pt' : modelo.path,
+            datasetPath: datasetAtivo.path
+        });
+
+        if (metricas.error) throw new Error(metricas.error);
+        
+        setResultados(prev => [...prev, { ...metricas, name: modelo.name }]);
+      } catch (err) {
+        console.error(err);
+        setLogs(prev => [...prev, `Erro em ${modelo.name}: ${err.message}`]);
+      }
+    }
+    setProcessing(false);
+  };
+
   return (
-    <div className="p-8 h-full flex flex-col bg-gray-50 min-h-screen">
-      
-      {/* HEADER */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-extrabold text-gray-900">Benchmark de Performance</h1>
-        <p className="text-gray-500 mt-2">Teste a velocidade e eficiência do modelo selecionado contra o dataset ativo.</p>
-      </div>
+    <div className="p-4 min-h-screen pb-20">
+      <h1 className="text-4xl font-extrabold text-gray-900 mb-8">Central de Configuração & Benchmark</h1>
 
-      {/* CONFIG CARD */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex gap-8 flex-1">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Modelo Ativo</span>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <p className="font-semibold text-lg text-gray-800">{config.model?.name || 'Carregando...'}</p>
-            </div>
-            <p className="text-xs text-gray-400 truncate max-w-[200px]" title={config.model?.path}>{config.model?.path}</p>
-          </div>
-          <div className="w-px bg-gray-200"></div>
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Dataset de Teste</span>
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${config.dataset?.type === 'local' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-              <p className="font-semibold text-lg text-gray-800">{config.dataset?.name || 'Carregando...'}</p>
-            </div>
-            <p className="text-xs text-gray-400 truncate max-w-[200px]" title={config.dataset?.path}>{config.dataset?.path}</p>
+      {/* --- SEÇÃO 1: CONFIGURAÇÃO --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        {/* Card Modelos */}
+        <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
+          <h2 className="text-lg font-bold mb-4 flex justify-between">
+            Modelos Disponíveis
+            <button onClick={importarModelo} className="text-sm text-blue-600 hover:underline">+ Adicionar</button>
+          </h2>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {modelos.map(m => (
+              <div key={m.id} className="flex justify-between p-3 bg-gray-50 rounded border">
+                <span className="font-medium">{m.name}</span>
+                <span className="text-xs bg-gray-200 px-2 py-1 rounded">{m.framework}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <button 
-          onClick={runBenchmark}
-          disabled={status === 'loading' || config.dataset?.type === 'remote'}
-          className={`px-8 py-3 rounded-lg font-bold text-white shadow-lg transition-all transform hover:scale-105 ${
-            status === 'loading' || config.dataset?.type === 'remote'
-             ? 'bg-gray-400 cursor-not-allowed transform-none' 
-             : 'bg-indigo-600 hover:bg-indigo-700'
-          }`}
-        >
-          {status === 'loading' ? 'Executando...' : 'INICIAR TESTE'}
-        </button>
-      </div>
-
-      {/* PROGRESS BAR */}
-      {status === 'loading' && (
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-8 overflow-hidden">
-          <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-        </div>
-      )}
-
-      {/* RESULTS GRID */}
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          
-          {/* FPS CARD */}
-          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-indigo-500">
-            <span className="text-gray-400 text-xs font-bold uppercase">Velocidade (FPS)</span>
-            <h3 className="text-4xl font-extrabold text-indigo-600 mt-2">{metrics.fps}</h3>
-            <p className="text-sm text-gray-500">Quadros por segundo</p>
-          </div>
-
-          {/* TIME CARD */}
-          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-            <span className="text-gray-400 text-xs font-bold uppercase">Latência Média</span>
-            <h3 className="text-4xl font-extrabold text-blue-600 mt-2">{metrics.avgTime}<span className="text-lg">ms</span></h3>
-            <p className="text-sm text-gray-500">Por imagem</p>
-          </div>
-
-          {/* TOTAL IMAGES */}
-          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
-            <span className="text-gray-400 text-xs font-bold uppercase">Imagens Processadas</span>
-            <h3 className="text-4xl font-extrabold text-green-600 mt-2">{metrics.totalImages}</h3>
-            <p className="text-sm text-gray-500">Em {metrics.totalTime} segundos</p>
-          </div>
-
-           {/* TOTAL DETECTIONS */}
-           <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
-            <span className="text-gray-400 text-xs font-bold uppercase">Cromossomos</span>
-            <h3 className="text-4xl font-extrabold text-purple-600 mt-2">{metrics.totalDetections}</h3>
-            <p className="text-sm text-gray-500">Objetos identificados</p>
+        {/* Card Datasets */}
+        <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
+          <h2 className="text-lg font-bold mb-4 flex justify-between">
+            Dataset de Teste (Target)
+            <button onClick={importarDataset} className="text-sm text-green-600 hover:underline">+ Vincular Pasta</button>
+          </h2>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {datasets.map(ds => (
+              <div 
+                key={ds.id} 
+                onClick={() => setDatasetAtivo(ds)}
+                className={`flex justify-between p-3 rounded border cursor-pointer ${datasetAtivo.id === ds.id ? 'border-green-500 bg-green-50' : 'bg-gray-50'}`}
+              >
+                <span className="font-medium truncate">{ds.name}</span>
+                <span className="text-xs">{ds.type}</span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
-
-      {/* LOG TERMINAL */}
-      <div className="flex-1 bg-gray-900 rounded-xl p-4 font-mono text-sm overflow-y-auto border border-gray-700 shadow-inner max-h-[300px]">
-        <div className="text-gray-400 mb-2 border-b border-gray-700 pb-2">Terminal de Execução</div>
-        {logs.length === 0 ? (
-          <span className="text-gray-600 italic">Aguardando início...</span>
-        ) : (
-          logs.map((log, index) => (
-            <div key={index} className="text-green-400 mb-1">
-              <span className="text-gray-500 mr-2">{log.split(']')[0]}]</span>
-              {log.split(']')[1]}
-            </div>
-          ))
-        )}
       </div>
 
+      <div className="divider"></div>
+
+      {/* --- SEÇÃO 2: TABELA COMPARATIVA --- */}
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Resultados do Benchmark</h2>
+          <button 
+            onClick={rodarComparativo} 
+            disabled={processing}
+            className={`btn btn-primary ${processing ? 'loading' : ''}`}
+          >
+            {processing ? 'Processando...' : 'Rodar Comparativo em Lote'}
+          </button>
+        </div>
+
+        <div className="overflow-x-auto bg-white rounded-xl shadow border">
+          <table className="table w-full">
+            <thead className="bg-gray-100">
+              <tr>
+                <th>Modelo</th>
+                <th>mAP (50%)</th>
+                <th>Precisão</th>
+                <th>Recall</th>
+                <th>Velocidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultados.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-8 text-gray-400">Nenhum teste executado ainda.</td></tr>
+              ) : (
+                resultados.sort((a,b) => b.map50 - a.map50).map((res, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="font-bold">{res.name} {idx===0 && '🏆'}</td>
+                    <td className="text-green-600 font-bold">{(res.map50 * 100).toFixed(1)}%</td>
+                    <td>{res.precision}</td>
+                    <td>{res.recall}</td>
+                    <td>{res.speed} ms</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Terminal de Logs */}
+        <div className="mt-4 p-3 bg-gray-900 text-green-400 font-mono text-xs h-32 overflow-y-auto rounded-lg">
+           {logs.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
+      </div>
     </div>
   );
 }

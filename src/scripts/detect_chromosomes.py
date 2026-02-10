@@ -41,11 +41,13 @@ def main():
             # Conta as caixas detectadas (len(boxes))
             # Ajuste aqui se quiser filtrar por classe ou confiança
             count = len(results[0].boxes)
+            details = []
             
             # Formata a saída
             results_dict[img_path] = {
                 "count": count,
-                "status": "success"
+                "status": "success",
+                "details": details
             }
 
         # IMPRIME APENAS O JSON FINAL (Importante!)
