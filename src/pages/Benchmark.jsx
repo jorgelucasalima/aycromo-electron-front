@@ -22,43 +22,29 @@ export default function Benchmark() {
     const dSalvos = JSON.parse(localStorage.getItem('datasets_ia') || '[]');
     
     // Mesclar com padrões
-    setModelos(prev => [...prev.filter(p => p.path !== 'yolo11n.pt'), ...mSalvos]);
+    const padroes = [{ id: 'yolo-base', name: 'YOLO v11 (Base)', path: 'yolo11n.pt', framework: 'YOLO' }];
+    const filtrados = mSalvos.filter((m) => m.path !== 'default' && m.id !== 'yolo-v11' && m.path !== 'yolo11n.pt');
+    const todosModelos = [...padroes, ...filtrados];
+
+    setModelos(todosModelos);
     setDatasets([...DATASETS_ESTATICOS, ...dSalvos]);
   }, []);
 
-  // --- FUNÇÕES DE CONFIGURAÇÃO (Simplificadas para brevidade) ---
-  const importarModelo = async () => {
-    const novo = await window.electronAPI.importModel();
-    if(novo) {
-      const novaLista = [...modelos, { ...novo, id: Date.now().toString(), framework: 'YOLO' }];
-      setModelos(novaLista);
-      localStorage.setItem('modelos_ia', JSON.stringify(novaLista.filter(m => m.path !== 'yolo11n.pt')));
-    }
-  };
-
-  const importarDataset = async () => {
-    const novo = await window.electronAPI.importDataset();
-    if(novo) {
-      const novaLista = [...datasets, { ...novo, id: Date.now().toString(), type: 'local' }];
-      setDatasets(novaLista); // Salvar no localStorage...
-    }
-  };
-
-  // --- FUNÇÃO DO BENCHMARK (Comparativo) ---
-  const rodarComparativo = async () => {
+  // --- FUNÇÃO DO BENCHMARK ---
+  const rodarBenchmark = async () => {
+    if (!datasetAtivo) return alert("Selecione um dataset.");
     if (datasetAtivo.type === 'remote') return alert("Use um dataset local com pasta /labels.");
     
     setProcessing(true);
-    setResultados([]);
+    setResultados([]); // Limpa resultados anteriores
     setLogs([]);
 
     for (const modelo of modelos) {
       try {
         setLogs(prev => [...prev, `Testando ${modelo.name}...`]);
         
-        // Chama o script benchmark.py que criamos anteriormente
         const metricas = await window.electronAPI.runBenchmarkMetrics({
-            modeloPath: modelo.path === 'default' ? 'yolo11n.pt' : modelo.path,
+            modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'yolo11n.pt' : modelo.path,
             datasetPath: datasetAtivo.path
         });
 
@@ -70,6 +56,7 @@ export default function Benchmark() {
         setLogs(prev => [...prev, `Erro em ${modelo.name}: ${err.message}`]);
       }
     }
+    
     setProcessing(false);
   };
 
@@ -83,30 +70,31 @@ export default function Benchmark() {
         <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
           <h2 className="text-lg font-bold mb-4 flex justify-between">
             Modelos Disponíveis
-            <button onClick={importarModelo} className="text-sm text-blue-600 hover:underline">+ Adicionar</button>
           </h2>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {modelos.map(m => (
-              <div key={m.id} className="flex justify-between p-3 bg-gray-50 rounded border">
-                <span className="font-medium">{m.name}</span>
-                <span className="text-xs bg-gray-200 px-2 py-1 rounded">{m.framework}</span>
+              <div 
+                key={m.id} 
+                className="flex justify-between p-3 rounded border bg-gray-50 flex-col sm:flex-row gap-1"
+              >
+                <span className="font-medium truncate">{m.name}</span>
+                <span className="text-xs bg-gray-200 px-2 py-1 rounded w-fit">{m.framework}</span>
               </div>
             ))}
           </div>
         </div>
-
+ 
         {/* Card Datasets */}
         <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
           <h2 className="text-lg font-bold mb-4 flex justify-between">
             Dataset de Teste
-            <button onClick={importarDataset} className="text-sm text-green-600 hover:underline">+ Vincular Pasta</button>
           </h2>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {datasets.map(ds => (
               <div 
                 key={ds.id} 
                 onClick={() => setDatasetAtivo(ds)}
-                className={`flex justify-between p-3 rounded border cursor-pointer ${datasetAtivo.id === ds.id ? 'border-green-500 bg-green-50' : 'bg-gray-50'}`}
+                className={`flex justify-between p-3 rounded border cursor-pointer ${datasetAtivo?.id === ds.id ? 'border-green-500 bg-green-50' : 'bg-gray-50'}`}
               >
                 <span className="font-medium truncate">{ds.name}</span>
                 <span className="text-xs">{ds.type}</span>
@@ -123,8 +111,8 @@ export default function Benchmark() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">Resultados do Benchmark</h2>
           <button 
-            onClick={rodarComparativo} 
-            disabled={processing}
+            onClick={rodarBenchmark} 
+            disabled={processing || !datasetAtivo}
             className={`btn btn-primary ${processing ? 'loading' : ''}`}
           >
             {processing ? 'Processando...' : 'Rodar Comparativo em Lote'}
