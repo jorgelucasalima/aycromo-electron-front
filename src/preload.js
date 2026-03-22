@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listFiles: (folderPath) => ipcRenderer.invoke('list-files', folderPath),
   runBenchmarkMetrics: (data) => ipcRenderer.invoke('run-benchmark-metrics', data),
   saveAnnotations: (data) => ipcRenderer.invoke('save-annotations', data),
+  selectImages: () => ipcRenderer.invoke('select-images'),
 });

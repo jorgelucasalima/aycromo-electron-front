@@ -30,19 +30,24 @@ export default function AnaliseCuradoria() {
     if(todosModelos.length > 0) setModeloAtivo(todosModelos[0].id);
   }, []);
 
-  const handleUpload = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      const novas = files.map(file => ({
-        url: URL.createObjectURL(file),
-        path: file.path,
-        name: file.name,
-        boxes: []
-      }));
-      setImagens(prev => [...prev, ...novas]);
-      if (imgIndex === -1) setImgIndex(0);
+  const handleSelectImages = async () => {
+    try {
+      const result = await window.electronAPI.selectImages();
+      if (result && result.length > 0) {
+        const novas = result.filter(img => img.url).map(img => ({
+          ...img,
+          boxes: []
+        }));
+        
+        if (novas.length > 0) {
+          setImagens(prev => [...prev, ...novas]);
+          if (imgIndex === -1) setImgIndex(0);
+        }
+      }
+    } catch(e) {
+      console.error(e);
+      alert("Erro ao tentar importar as fotos.");
     }
-    e.target.value = null; 
   };
 
   const removeImagem = (index, e) => {
@@ -187,10 +192,7 @@ export default function AnaliseCuradoria() {
   const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (e) => {
     e.preventDefault();
-    if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const inputPseudoEvent = { target: { files: e.dataTransfer.files } };
-      handleUpload(inputPseudoEvent);
-    }
+    alert("Por favor, utilize o botão + Adicionar (O Chrome bloqueia o caminho de pastas ao arrastar e soltar)");
   };
 
   const totalBoxes = imagemAtual ? imagemAtual.boxes.length : 0;
@@ -223,10 +225,9 @@ export default function AnaliseCuradoria() {
          <div className="w-1/4 min-w-[250px] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                <h3 className="font-bold text-gray-700">Imagens ({imagens.length})</h3>
-               <label className="btn btn-xs btn-outline btn-primary cursor-pointer">
+               <button onClick={handleSelectImages} className="btn btn-xs btn-outline btn-primary cursor-pointer">
                   + Adicionar
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
-               </label>
+               </button>
             </div>
             
             <div 
@@ -301,7 +302,11 @@ export default function AnaliseCuradoria() {
                         >
                            X
                         </button>
-                        {box.manual && <span className="absolute -top-4 left-0 bg-yellow-400 text-black text-[9px] px-1 font-bold">MANUAL</span>}
+                        {box.manual ? (
+                           <span className="absolute -top-4 left-0 bg-yellow-400 text-black text-[9px] px-1 font-bold">MANUAL</span>
+                        ) : (
+                           <span className="absolute -top-4 left-0 bg-green-500 text-white text-[9px] px-1 font-bold">IA</span>
+                        )}
                      </div>
                  ))}
 

@@ -69,6 +69,34 @@ ipcMain.handle('import-dataset', async () => {
 });
 
 /**
+ * 2.5 Seleção Nativa de Múltiplas Imagens (Evita problema de Segurança de Sandbox do Browser)
+ */
+ipcMain.handle('select-images', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Selecionar Imagens de Cromossomos',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'webp'] }]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return [];
+
+  // Converte pra base64 internamente pra exibir direto no Chromium (opcional)
+  // Ou melhor, retornamos os buffers criados temporariamente para obj URL nativos
+  return result.filePaths.map(p => {
+     // Lemos a imagem nativa como URL Data e enviamos puro para o frontend.
+     // Isso resolve o problema the "Not allowed to load local resource" em algumas configs do vite.
+     try {
+       const b = fs.readFileSync(p);
+       const ext = path.extname(p).toLowerCase().replace('.', '');
+       const base64 = `data:image/${ext};base64,${b.toString('base64')}`;
+       return { path: p, name: path.basename(p), url: base64 };
+     } catch (e) {
+       return { path: p, name: path.basename(p), url: null };
+     }
+  });
+});
+
+/**
  * 3. Gerenciador de Inferência Híbrido (Python ou ONNX)
  * Usado na tela de "Laboratório de Análise" para detecção visual (bounding boxes)
  */
@@ -155,7 +183,7 @@ ipcMain.handle('run-benchmark-metrics', async (event, data) => {
       scriptPath,
       modeloPath,
       datasetPath
-    ], { shell: true });
+    ]);
 
     let stdoutData = "";
     let stderrData = "";
@@ -248,7 +276,7 @@ function runPythonInference(modeloPath, imagens) {
       scriptPath,
       modeloPath,
       ...imagens
-    ], { shell: true });
+    ]);
 
     let stdoutData = "";
     let stderrData = "";

@@ -36,7 +36,8 @@ def main():
                 continue
 
             # verbose=False impede que o YOLO suje o console com logs extras
-            results = model.predict(img_path, verbose=False)
+            # Reduzindo conf para 0.15 para capturar predições de modelos customizados com confiança mais baixa
+            results = model.predict(img_path, verbose=False, conf=0.15)
             
             # Conta as caixas detectadas (len(boxes))
             boxes_obj = results[0].boxes
