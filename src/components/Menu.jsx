@@ -46,7 +46,7 @@ export default function Menu() {
     // { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
     { name: 'Análise de IA', path: '/analise', icon: <FaUncharted size={20} /> },
     { name: 'Benchmark', path: '/benchmark', icon: <LuChartSpline size={20} /> },
-    // { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
+    { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
   ];
 
   const MenuItem = ({ item }) => (

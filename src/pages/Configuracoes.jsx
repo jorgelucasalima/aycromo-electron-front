@@ -27,7 +27,14 @@ export default function Configuracoes() {
     const dImportados = localStorage.getItem('datasets_ia');
     const dAtivo = localStorage.getItem('dataset_ativo');
 
-    if (mSalvos) setModelos(JSON.parse(mSalvos));
+    if (mSalvos) {
+      const parsed = JSON.parse(mSalvos);
+      // Remove modelos duplicados baseados no ID (corrige erro no localStorage)
+      const uniqueModelos = parsed.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      setModelos(uniqueModelos);
+      // Salva de volta a lista corrigida para limpar o LocalStorage
+      localStorage.setItem('modelos_ia', JSON.stringify(uniqueModelos));
+    }
     if (mAtivo) setModeloAtivo(mAtivo);
     
     // Mescla fixos com importados
@@ -105,8 +112,8 @@ export default function Configuracoes() {
   return (
     <div className="p-8 min-h-screen bg-white">
       <header className="mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Painel de Controle</h1>
-        <p className="text-gray-500 mt-2">Configurações de infraestrutura para análise cromossômica.</p>
+        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Confirguração</h1>
+        <p className="text-gray-500 mt-2">Configurações de modelos e datasets para análise cromossômica.</p>
       </header>
 
       {showModal && (
@@ -131,9 +138,10 @@ export default function Configuracoes() {
         {/* MODELOS */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">🧠 Modelos</h2>
+            <h2 className="text-xl font-bold text-gray-800">Modelos</h2>
           </div>
           <div className="space-y-3">
+            <button onClick={handleIniciarImportacao} className="w-full p-4 border-2 border-dashed rounded-xl text-gray-400 hover:text-blue-500 hover:bg-gray-50 transition-all font-medium italic">+ Adicionar Modelo Customizado</button>
             {modelos.map((m) => (
               <div key={m.id} className={`p-4 rounded-xl border-2 flex justify-between items-center transition-all ${modeloAtivo === m.id ? 'border-blue-500 bg-blue-50/20' : 'border-gray-200 bg-gray-50'}`}>
                 <div className="truncate flex-1">
@@ -148,16 +156,16 @@ export default function Configuracoes() {
                 </div>
               </div>
             ))}
-            <button onClick={handleIniciarImportacao} className="w-full p-4 border-2 border-dashed rounded-xl text-gray-400 hover:text-blue-500 hover:bg-gray-50 transition-all font-medium italic">+ Adicionar Modelo Customizado</button>
           </div>
         </section>
 
         {/* DATASETS */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">📂 Datasets</h2>
+            <h2 className="text-xl font-bold text-gray-800">Datasets</h2>
           </div>
           <div className="space-y-3">
+            <button onClick={handleImportarDataset} className="w-full p-4 border-2 border-dashed rounded-xl text-gray-400 hover:text-green-500 hover:bg-gray-50 transition-all font-medium italic">+ Vincular Pasta Externa</button>
             {datasets.map((ds) => (
               <div key={ds.id} className={`p-4 rounded-xl border-2 flex justify-between items-center transition-all ${datasetAtivo === ds.id ? 'border-green-500 bg-green-50/20' : 'border-gray-200 bg-gray-50'}`}>
                 <div className="truncate flex-1">
@@ -172,7 +180,6 @@ export default function Configuracoes() {
                 </div>
               </div>
             ))}
-            <button onClick={handleImportarDataset} className="w-full p-4 border-2 border-dashed rounded-xl text-gray-400 hover:text-green-500 hover:bg-gray-50 transition-all font-medium italic">+ Vincular Pasta Externa</button>
           </div>
         </section>
       </div>

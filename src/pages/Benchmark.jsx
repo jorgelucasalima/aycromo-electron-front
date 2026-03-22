@@ -98,7 +98,7 @@ export default function Benchmark() {
         {/* Card Datasets */}
         <div className="bg-white p-6 rounded-xl shadow border border-gray-200">
           <h2 className="text-lg font-bold mb-4 flex justify-between">
-            Dataset de Teste (Target)
+            Dataset de Teste
             <button onClick={importarDataset} className="text-sm text-green-600 hover:underline">+ Vincular Pasta</button>
           </h2>
           <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -148,7 +148,7 @@ export default function Benchmark() {
               ) : (
                 resultados.sort((a,b) => b.map50 - a.map50).map((res, idx) => (
                   <tr key={idx} className="hover:bg-gray-50">
-                    <td className="font-bold">{res.name} {idx===0 && '🏆'}</td>
+                    <td className="font-bold">{res.name} {idx===0 && 'Melhor'}</td>
                     <td className="text-green-600 font-bold">{(res.map50 * 100).toFixed(1)}%</td>
                     <td>{res.precision}</td>
                     <td>{res.recall}</td>
