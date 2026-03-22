@@ -39,9 +39,21 @@ def main():
             results = model.predict(img_path, verbose=False)
             
             # Conta as caixas detectadas (len(boxes))
-            # Ajuste aqui se quiser filtrar por classe ou confiança
-            count = len(results[0].boxes)
+            boxes_obj = results[0].boxes
+            count = len(boxes_obj)
             details = []
+
+            # Extrai as coordenadas XYWH convertendo para formato de topo esquerdo para o React
+            if count > 0:
+                xywh_data = boxes_obj.xywh.cpu().numpy()
+                for b in xywh_data:
+                    # x_center, y_center, width, height -> x_left, y_top, w, h
+                    details.append({
+                        "x": float(b[0] - b[2]/2),
+                        "y": float(b[1] - b[3]/2),
+                        "w": float(b[2]),
+                        "h": float(b[3])
+                    })
             
             # Formata a saída
             results_dict[img_path] = {

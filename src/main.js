@@ -192,6 +192,49 @@ ipcMain.handle('run-benchmark-metrics', async (event, data) => {
   });
 });
 
+/**
+ * 6. Salvar Anotações (Curadoria Manual YOLO)
+ */
+ipcMain.handle('save-annotations', async (event, annotationsData) => {
+  try {
+    let savedCount = 0;
+    for (const data of annotationsData) {
+      const { path: imagePath, width, height, boxes } = data;
+      
+      let txtContent = "";
+      for (const box of boxes) {
+        // Formato YOLO: class x_center y_center w h (normalizado 0.0 a 1.0)
+        const x_center = (box.x + box.w / 2) / width;
+        const y_center = (box.y + box.h / 2) / height;
+        const w_norm = box.w / width;
+        const h_norm = box.h / height;
+        
+        txtContent += `0 ${x_center.toFixed(6)} ${y_center.toFixed(6)} ${w_norm.toFixed(6)} ${h_norm.toFixed(6)}\n`;
+      }
+      
+      // Detecta estrutura yolo padrão (se tiver pasta images grava na labels correspondente)
+      const dirName = path.dirname(imagePath);
+      const baseName = path.basename(imagePath, path.extname(imagePath));
+      
+      let saveDir = dirName;
+      if (path.basename(dirName).toLowerCase() === 'images') {
+        saveDir = path.join(path.dirname(dirName), 'labels');
+        if (!fs.existsSync(saveDir)) {
+          fs.mkdirSync(saveDir, { recursive: true });
+        }
+      }
+      
+      const txtPath = path.join(saveDir, `${baseName}.txt`);
+      fs.writeFileSync(txtPath, txtContent);
+      savedCount++;
+    }
+    return { success: true, saved: savedCount };
+  } catch (error) {
+    console.error("Erro ao salvar anotações:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 
 // --- FUNÇÕES AUXILIARES (MOTORES DE IA) ---
 

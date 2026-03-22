@@ -110,9 +110,9 @@ export default function Configuracoes() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-white">
+    <div className="p-4 min-h-screen bg-white">
       <header className="mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Confirguração</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Configurações</h1>
         <p className="text-gray-500 mt-2">Configurações de modelos e datasets para análise cromossômica.</p>
       </header>
 

@@ -113,7 +113,7 @@ export default function Benchmark() {
           <button 
             onClick={rodarBenchmark} 
             disabled={processing || !datasetAtivo}
-            className={`btn btn-primary ${processing ? 'loading' : ''}`}
+            className={`btn btn-primary bg-blue-600 ${processing ? 'loading' : ''}`}
           >
             {processing ? 'Processando...' : 'Rodar Comparativo em Lote'}
           </button>
