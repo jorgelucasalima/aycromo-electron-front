@@ -62,7 +62,7 @@ export default function Benchmark() {
 
   return (
     <div className="p-4 min-h-screen pb-20">
-      <h1 className="text-4xl font-extrabold text-gray-900 mb-8">Central de Configuração & Benchmark</h1>
+      <h1 className="text-4xl font-extrabold text-gray-900 mb-8">Benchmark</h1>
 
       {/* --- SEÇÃO 1: CONFIGURAÇÃO --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
