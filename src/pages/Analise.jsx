@@ -22,8 +22,8 @@ export default function AnaliseCuradoria() {
 
   useEffect(() => {
     const mSalvos = JSON.parse(localStorage.getItem('modelos_ia') || '[]');
-    const padroes = [{ id: 'yolo-base', name: 'YOLO v11 (Base)', path: 'yolo11n.pt', framework: 'YOLO' }];
-    const filtrados = mSalvos.filter((m) => m.path !== 'default' && m.id !== 'yolo-v11' && m.path !== 'yolo11n.pt');
+    const padroes = [{ id: 'yolo-base', name: 'YOLO v11 (Padrão)', path: 'best-yolo11.pt', framework: 'YOLO' }];
+    const filtrados = mSalvos.filter((m) => m.path !== 'best-yolo11.pt' && m.id !== 'yolo-base');
     const todosModelos = [...padroes, ...filtrados];
     
     setModelos(todosModelos);
@@ -69,7 +69,7 @@ export default function AnaliseCuradoria() {
 
     try {
       const modelo = modelos.find(m => m.id === modeloAtivo);
-      const caminhoModelo = (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'yolo11n.pt' : modelo.path;
+      const caminhoModelo = (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'best-yolo11.pt' : modelo.path;
       
       const caminhosImagens = imagens.map(img => img.path);
 

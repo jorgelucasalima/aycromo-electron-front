@@ -11,7 +11,7 @@ const DATASETS_ESTATICOS = [
 ];
 
 export default function Configuracoes() {
-  const [modelos, setModelos] = useState([{ id: 'yolo-v11', name: 'YOLO v11 (Padrão)', path: 'default', framework: 'YOLO' }]);
+  const [modelos, setModelos] = useState([{ id: 'yolo-v11', name: 'YOLO v11 (Padrão)', path: 'best-yolo11.pt', framework: 'YOLO' }]);
   const [modeloAtivo, setModeloAtivo] = useState('yolo-v11');
   
   // Alterado: O datasetAtivo agora inicia como 'ds-interno-yolo'

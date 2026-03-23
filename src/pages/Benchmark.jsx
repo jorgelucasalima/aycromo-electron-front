@@ -7,7 +7,7 @@ const DATASETS_ESTATICOS = [
 
 export default function Benchmark() {
   // --- ESTADOS DE CONFIGURAÇÃO ---
-  const [modelos, setModelos] = useState([{ id: 'yolo-base', name: 'YOLO v11 (Base)', path: 'yolo11n.pt', framework: 'YOLO' }]);
+  const [modelos, setModelos] = useState([{ id: 'yolo-base', name: 'YOLO v11 (Padrão)', path: 'best-yolo11.pt', framework: 'YOLO' }]);
   const [datasets, setDatasets] = useState(DATASETS_ESTATICOS);
   const [datasetAtivo, setDatasetAtivo] = useState(DATASETS_ESTATICOS[0]);
   
@@ -22,8 +22,8 @@ export default function Benchmark() {
     const dSalvos = JSON.parse(localStorage.getItem('datasets_ia') || '[]');
     
     // Mesclar com padrões
-    const padroes = [{ id: 'yolo-base', name: 'YOLO v11 (Base)', path: 'yolo11n.pt', framework: 'YOLO' }];
-    const filtrados = mSalvos.filter((m) => m.path !== 'default' && m.id !== 'yolo-v11' && m.path !== 'yolo11n.pt');
+    const padroes = [{ id: 'yolo-base', name: 'YOLO v11 (Padrão)', path: 'best-yolo11.pt', framework: 'YOLO' }];
+    const filtrados = mSalvos.filter((m) => m.path !== 'default' && m.id !== 'yolo-v11' && m.path !== 'best-yolo11.pt');
     const todosModelos = [...padroes, ...filtrados];
 
     setModelos(todosModelos);
@@ -44,7 +44,7 @@ export default function Benchmark() {
         setLogs(prev => [...prev, `Testando ${modelo.name}...`]);
         
         const metricas = await window.electronAPI.runBenchmarkMetrics({
-            modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'yolo11n.pt' : modelo.path,
+            modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'best-yolo11.pt' : modelo.path,
             datasetPath: datasetAtivo.path
         });
 
