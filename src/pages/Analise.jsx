@@ -222,7 +222,7 @@ export default function AnaliseCuradoria() {
 
       <div className="flex flex-1 gap-4 overflow-hidden h-full">
          {/* BARRA LATERAL DA GALERIA */}
-         <div className="w-1/4 min-w-[250px] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+         <div className="w-60 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                <h3 className="font-bold text-gray-700">Imagens ({imagens.length})</h3>
                <button onClick={handleSelectImages} className="btn btn-xs btn-outline btn-primary cursor-pointer">
