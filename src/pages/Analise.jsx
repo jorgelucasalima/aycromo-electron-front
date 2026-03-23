@@ -237,7 +237,7 @@ export default function AnaliseCuradoria() {
             >
                {imagens.length === 0 && (
                   <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 mt-10 text-sm">
-                    Arraste imagens ou clique em + Add acima
+                    Arraste imagens ou clique em + Adicionar acima
                   </div>
                )}
                {imagens.map((img, idx) => (
