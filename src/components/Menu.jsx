@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { HiOutlineCog , HiOutlinePaperClip, HiOutlineChip, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
+import { HiOutlineCog , HiOutlinePaperClip, HiOutlineChip, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineDocumentReport } from 'react-icons/hi';
 import { FaUncharted } from "react-icons/fa6";
 import { LuChartSpline } from "react-icons/lu";
 
@@ -43,8 +43,8 @@ export default function Menu({ isCollapsed, toggleCollapse }) {
 
   const managementItems = [
     // { name: 'Dashboard', path: '/dashboard', icon: <HiOutlineChartBar size={20} /> },
-    // { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
     { name: 'Análise de IA', path: '/analise', icon: <FaUncharted size={20} /> },
+    { name: 'Relatórios', path: '/relatorios', icon: <HiOutlineDocumentReport size={20} /> },
     { name: 'Benchmark', path: '/benchmark', icon: <LuChartSpline size={20} /> },
     { name: 'Configurações', path: '/configuracoes', icon: <HiOutlineCog size={20} /> },
   ];
@@ -80,21 +80,6 @@ export default function Menu({ isCollapsed, toggleCollapse }) {
 
         {managementItems.map(item => <MenuItem key={item.name} item={item} />)}
       </ul>
-
-      {/* PARTE INFERIOR: Modelo Selecionado */}
-      <div className={`bg-base-300 border-t border-base-content/10 transition-all ${isCollapsed ? 'p-2' : 'p-4'}`}>
-        <div className={`flex items-center gap-3 rounded-lg bg-base-100 shadow-sm border border-blue-500/30 overflow-hidden cursor-help transition-all ${isCollapsed ? 'justify-center p-2' : 'px-3 py-3'}`} title={isCollapsed ? modeloNome : ''}>
-          <HiOutlineChip className="text-blue-500 flex-shrink-0" size={isCollapsed ? 28 : 24} />
-          {!isCollapsed && (
-            <div className="flex flex-col overflow-hidden whitespace-nowrap">
-              <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">IA Ativa</span>
-              <span className="text-sm font-semibold truncate text-blue-600 dark:text-blue-400">
-                {modeloNome}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

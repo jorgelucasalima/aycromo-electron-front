@@ -255,6 +255,48 @@ ipcMain.handle('save-annotations', async (event, annotationsData) => {
   }
 });
 
+/**
+ * 7. Exportar Anotações (Para pasta específica escolhida pelo usuário)
+ */
+ipcMain.handle('export-annotations', async (event, annotationsData) => {
+  try {
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Selecione a pasta para exportar as anotações',
+      properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (canceled || filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const saveDir = filePaths[0];
+    let savedCount = 0;
+
+    for (const data of annotationsData) {
+      const { path: imagePath, width, height, boxes } = data;
+      
+      let txtContent = "";
+      for (const box of boxes) {
+        const x_center = (box.x + box.w / 2) / width;
+        const y_center = (box.y + box.h / 2) / height;
+        const w_norm = box.w / width;
+        const h_norm = box.h / height;
+        txtContent += `0 ${x_center.toFixed(6)} ${y_center.toFixed(6)} ${w_norm.toFixed(6)} ${h_norm.toFixed(6)}\n`;
+      }
+      
+      const baseName = path.basename(imagePath, path.extname(imagePath));
+      const txtPath = path.join(saveDir, `${baseName}.txt`);
+      fs.writeFileSync(txtPath, txtContent);
+      savedCount++;
+    }
+    return { success: true, saved: savedCount, directory: saveDir };
+  } catch (error) {
+    console.error("Erro ao exportar anotações:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 
 // --- MOTOR ÚNICO: PYTHON ---
 // Carrega arquivos .pt, .onnx nativamente com resize dinâmico

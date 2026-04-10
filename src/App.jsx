@@ -21,8 +21,8 @@ export default function App() {
       <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
         <Routes>
           {/* <Route path="/" element={<AnexarImagens />} index/> */}
-          {/* <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/relatorios" element={<Relatorios />} /> */}
+          {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+          <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/benchmark" element={<Benchmark />} />
           <Route path='analise' element={<AnaliseCuradoria />} />

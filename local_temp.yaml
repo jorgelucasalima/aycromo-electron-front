@@ -1,0 +1,5 @@
+names:
+  0: cromossomo
+path: /Users/jorge/Documents/Projetos/Aycromo-Electronapp/aycromo
+train: public/datasets/yolo/images
+val: public/datasets/yolo/images

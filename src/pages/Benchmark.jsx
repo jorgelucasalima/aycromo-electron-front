@@ -8,6 +8,7 @@ const DATASETS_ESTATICOS = [
 export default function Benchmark() {
   // --- ESTADOS DE CONFIGURAÇÃO ---
   const [modelos, setModelos] = useState([{ id: 'yolo-base', name: 'YOLO v11 (Padrão)', path: 'best-yolo11.pt', framework: 'YOLO' }]);
+  const [modeloAtivo, setModeloAtivo] = useState(null);
   const [datasets, setDatasets] = useState(DATASETS_ESTATICOS);
   const [datasetAtivo, setDatasetAtivo] = useState(DATASETS_ESTATICOS[0]);
   
@@ -28,6 +29,7 @@ export default function Benchmark() {
     const todosModelos = [...padroes, ...filtrados];
 
     setModelos(todosModelos);
+    if(todosModelos.length > 0) setModeloAtivo(todosModelos[0]);
     setDatasets([...DATASETS_ESTATICOS, ...dSalvos]);
   }, []);
 
@@ -35,39 +37,41 @@ export default function Benchmark() {
   const rodarBenchmark = async () => {
     if (!datasetAtivo) return alert("Selecione um dataset.");
     if (datasetAtivo.type === 'remote') return alert("Use um dataset local com pasta /labels.");
+    if (!modeloAtivo) return alert("Selecione um modelo primeiro.");
     
     setProcessing(true);
-    setResultados([]); // Limpa resultados anteriores
     setLogs([]);
     setProgresso(0);
 
-    let idx = 0;
-    const total = modelos.length;
+    const modelo = modeloAtivo;
 
-    if (total === 0) {
-      setProcessing(false);
-      return;
-    }
+    // Falso progresso para dar feedback visual durante a longa inferência backend
+    const progressoInterval = setInterval(() => {
+      setProgresso(prev => (prev < 95 ? prev + 0.5 : prev)); // Avança 0.5% a cada 500ms
+    }, 500);
 
-    for (const modelo of modelos) {
-      try {
-        setLogs(prev => [...prev, `Testando ${modelo.name}... (${idx + 1}/${total})`]);
-        
-        const metricas = await window.electronAPI.runBenchmarkMetrics({
-            modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'best-yolo11.pt' : modelo.path,
-            datasetPath: datasetAtivo.path
-        });
+    try {
+      setLogs(prev => [...prev, `Testando ${modelo.name}... (1/1)`]);
+      
+      const metricas = await window.electronAPI.runBenchmarkMetrics({
+          modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'best-yolo11.pt' : modelo.path,
+          datasetPath: datasetAtivo.path
+      });
 
-        if (metricas.error) throw new Error(metricas.error);
-        
-        setResultados(prev => [...prev, { ...metricas, name: modelo.name }]);
-      } catch (err) {
-        console.error(err);
-        setLogs(prev => [...prev, `Erro em ${modelo.name}: ${err.message}`]);
-      }
-
-      idx++;
-      setProgresso((idx / total) * 100);
+      if (metricas.error) throw new Error(metricas.error);
+      
+      // Atualiza ou insere o resultado para montarmos a tabela comparativa um por vez
+      setResultados(prev => {
+         const anteriores = prev.filter(r => r.name !== modelo.name);
+         return [...anteriores, { ...metricas, name: modelo.name }];
+      });
+      clearInterval(progressoInterval);
+      setProgresso(100);
+    } catch (err) {
+      console.error(err);
+      clearInterval(progressoInterval);
+      setProgresso(0);
+      setLogs(prev => [...prev, `Erro em ${modelo.name}: ${err.message}`]);
     }
     
     setProcessing(false);
@@ -88,10 +92,11 @@ export default function Benchmark() {
             {modelos.map(m => (
               <div 
                 key={m.id} 
-                className="flex justify-between p-3 rounded border bg-gray-50 flex-col sm:flex-row gap-1"
+                onClick={() => setModeloAtivo(m)}
+                className={`flex justify-between p-3 rounded border cursor-pointer flex-col sm:flex-row gap-1 ${modeloAtivo?.id === m.id ? 'border-green-500 bg-green-50' : 'bg-gray-50 hover:bg-gray-100'}`}
               >
                 <span className="font-medium truncate">{m.name}</span>
-                <span className="text-xs bg-gray-200 px-2 py-1 rounded w-fit">{m.framework}</span>
+                <span className="text-xs bg-white border border-gray-200 px-2 py-1 rounded w-fit">{m.framework}</span>
               </div>
             ))}
           </div>
@@ -125,10 +130,10 @@ export default function Benchmark() {
           <h2 className="text-2xl font-bold">Resultados do Benchmark</h2>
           <button 
             onClick={rodarBenchmark} 
-            disabled={processing || !datasetAtivo}
+            disabled={processing || !datasetAtivo || !modeloAtivo}
             className={`btn btn-primary bg-blue-600 ${processing ? 'loading' : ''}`}
           >
-            {processing ? 'Processando...' : 'Rodar Comparativo em Lote'}
+            {processing ? 'Processando...' : 'Rodar Benchmark'}
           </button>
         </div>
 

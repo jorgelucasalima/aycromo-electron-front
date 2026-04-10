@@ -7,13 +7,14 @@ export default function AnaliseCuradoria() {
   // Imagens: array de { url, path, name, boxes: [] }
   const [imagens, setImagens] = useState([]); 
   const [imgIndex, setImgIndex] = useState(-1);
-  
   const [processing, setProcessing] = useState(false);
   
   // Estados de Desenho Manual (para a imagem ativa)
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [tempBox, setTempBox] = useState(null); // Box fantasma durante o drag
+  const [resizingBoxIdx, setResizingBoxIdx] = useState(null);
+  const [zoom, setZoom] = useState(1);
   
   const imgRef = useRef(null);
   const containerRef = useRef(null);
@@ -29,6 +30,11 @@ export default function AnaliseCuradoria() {
     setModelos(todosModelos);
     if(todosModelos.length > 0) setModeloAtivo(todosModelos[0].id);
   }, []);
+
+  // --- CONTROLES DE ZOOM ---
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
+  const handleZoomReset = () => setZoom(1);
 
   const handleSelectImages = async () => {
     try {
@@ -58,6 +64,7 @@ export default function AnaliseCuradoria() {
       setImgIndex(-1);
     } else if (index === imgIndex) {
       setImgIndex(Math.max(0, index - 1));
+      setZoom(1); // Reseta zoom ao trocar de imagem forçada
     } else if (index < imgIndex) {
       setImgIndex(imgIndex - 1);
     }
@@ -123,7 +130,29 @@ export default function AnaliseCuradoria() {
     setTempBox({ x: pos.x, y: pos.y, w: 0, h: 0 });
   };
 
-  const moveDraw = (e) => {
+  const startResize = (e, idx) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingBoxIdx(idx);
+  };
+
+  const activeMove = (e) => {
+    if (resizingBoxIdx !== null) {
+      const pos = getCoords(e);
+      setImagens(prev => {
+        const copy = [...prev];
+        const boxes = [...copy[imgIndex].boxes];
+        const box = { ...boxes[resizingBoxIdx] };
+        box.w = Math.max(5, pos.x - box.x);
+        box.h = Math.max(5, pos.y - box.y);
+        box.manual = true; // Marca como editada pelo usuário!
+        boxes[resizingBoxIdx] = box;
+        copy[imgIndex] = { ...copy[imgIndex], boxes };
+        return copy;
+      });
+      return;
+    }
+
     if (!isDrawing) return;
     const endPos = getCoords(e);
     setTempBox({
@@ -134,7 +163,12 @@ export default function AnaliseCuradoria() {
     });
   };
 
-  const endDraw = (e) => {
+  const endAction = (e) => {
+    if (resizingBoxIdx !== null) {
+      setResizingBoxIdx(null);
+      return;
+    }
+
     if (!isDrawing) return;
     setIsDrawing(false);
     
@@ -187,6 +221,56 @@ export default function AnaliseCuradoria() {
      } else {
        alert("Erro ao salvar anotações: " + resultado.error);
      }
+  };
+
+  const exportarAnotacoes = async () => {
+     if(imagens.length === 0) return;
+     const exportImages = imagens.filter(img => img.boxes.length > 0);
+     if (exportImages.length === 0) {
+       return alert("Não existem caixas identificadas para exportar.");
+     }
+
+     const dadosExportacao = exportImages.map(img => ({
+         path: img.path,
+         width: imgRef.current ? imgRef.current.naturalWidth : 1,
+         height: imgRef.current ? imgRef.current.naturalHeight : 1,
+         boxes: img.boxes
+     }));
+     
+     const resultado = await window.electronAPI.exportAnnotations(dadosExportacao);
+     if(resultado.success) {
+       alert(`Exportado com sucesso! ${resultado.saved} arquivos TXT foram salvos em:\n${resultado.directory}`);
+     } else if (!resultado.canceled) {
+       alert("Erro ao exportar anotações: " + resultado.error);
+     }
+  };
+
+  const registrarRelatorio = () => {
+    if (imagens.length === 0) return alert("Não há imagens no lote para registrar.");
+    const procImagens = imagens.filter(i => i.boxes?.length > 0);
+    if (procImagens.length === 0) return alert("Nenhuma imagem processada/anotada neste lote para gerar relatório contundente.");
+
+    const nomeModelo = modelos.find(m => m.id === modeloAtivo)?.name || 'N/A';
+    const totalCromossomos = imagens.reduce((acc, i) => acc + (i.boxes?.length || 0), 0);
+
+    const relatorio = {
+      id: Date.now(),
+      data: new Date().toISOString(),
+      modelo: nomeModelo,
+      totalImagens: imagens.length,
+      processadas: procImagens.length,
+      totalCromossomos,
+      laminas: imagens.map(img => ({
+        nome: img.name,
+        cromossomos: img.boxes.length
+      }))
+    };
+
+    const historico = JSON.parse(localStorage.getItem('relatorios_ia') || '[]');
+    historico.unshift(relatorio); // Adiciona no início
+    localStorage.setItem('relatorios_ia', JSON.stringify(historico));
+
+    alert("Métricas deste lote foram registradas com sucesso no Histórico de Relatórios!");
   };
 
   const handleDragOver = (e) => e.preventDefault();
@@ -265,13 +349,32 @@ export default function AnaliseCuradoria() {
          </div>
 
          {/* ÁREA DE TRABALHO (EDITOR) */}
-         <div className="flex-1 bg-gray-100 rounded-xl overflow-auto flex justify-center items-center shadow-inner relative" ref={containerRef}>
+         <div className="flex-1 bg-gray-100 rounded-xl overflow-auto shadow-inner relative" ref={containerRef}>
+            
+            {/* Toolbar de Zoom Flutuante */}
+            {imagemAtual && (
+               <div className="fixed top-24 right-10 z-[100] flex items-center gap-1 bg-white/90 backdrop-blur p-1 rounded-lg border border-gray-300 shadow-lg">
+                 <button onClick={handleZoomOut} className="btn btn-sm btn-ghost px-3 text-lg font-bold hover:bg-gray-200" title="Reduzir Zoom">-</button>
+                 <span className="text-xs font-bold text-gray-700 w-12 text-center">{Math.round(zoom * 100)}%</span>
+                 <button onClick={handleZoomIn} className="btn btn-sm btn-ghost px-3 text-lg font-bold hover:bg-gray-200" title="Aumentar Zoom">+</button>
+                 <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                 <button onClick={handleZoomReset} className="btn btn-sm btn-ghost text-[10px] uppercase font-bold hover:bg-gray-200" title="Tamanho Original">Reset</button>
+               </div>
+            )}
+
             {!imagemAtual ? (
-               <div className="flex flex-col items-center justify-center text-gray-400">
+               <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
                   <p>Selecione ou faça upload de imagens para começar</p>
                </div>
             ) : (
-               <div className="relative inline-block my-auto mx-auto bg-white shadow-xl max-w-none">
+               <div className="min-w-full min-h-full flex p-10">
+                 <div 
+                   className="relative inline-block bg-white shadow-xl max-w-none m-auto transition-all duration-75"
+                   style={{ zoom: zoom }}
+                   onMouseMove={activeMove}
+                   onMouseUp={endAction}
+                   onMouseLeave={endAction}
+                 >
                  {/* Imagem Base */}
                  <img 
                    ref={imgRef}
@@ -279,9 +382,6 @@ export default function AnaliseCuradoria() {
                    alt="Análise"
                    className="max-w-none cursor-crosshair block" 
                    onMouseDown={startDraw}
-                   onMouseMove={moveDraw}
-                   onMouseUp={endDraw}
-                   onMouseLeave={endDraw}
                    onDragStart={(e) => e.preventDefault()} 
                  />
 
@@ -304,6 +404,15 @@ export default function AnaliseCuradoria() {
                         >
                            X
                         </button>
+
+                        {/* Anchor de Redimensionamento */}
+                        <div 
+                           onMouseDown={(e) => startResize(e, idx)}
+                           style={{ pointerEvents: 'auto' }}
+                           className={`absolute -right-2 -bottom-2 w-4 h-4 cursor-se-resize rounded-full border-2 border-white shadow-sm pointer-events-auto z-50 ${box.manual ? 'bg-yellow-400' : 'bg-green-500'}`}
+                           title="Redimensionar caixa"
+                        />
+
                         {box.manual ? (
                            <span className="absolute -top-4 left-0 bg-yellow-400 text-black text-[9px] px-1 font-bold">MANUAL</span>
                         ) : (
@@ -319,6 +428,7 @@ export default function AnaliseCuradoria() {
                       style={{ left: tempBox.x, top: tempBox.y, width: tempBox.w, height: tempBox.h }}
                     />
                  )}
+               </div>
                </div>
             )}
          </div>
@@ -337,11 +447,25 @@ export default function AnaliseCuradoria() {
                <strong className="text-blue-600 text-lg">{totalBoxes}</strong> cromossomos na imagem
              </span>
              <button 
+                onClick={registrarRelatorio} 
+                className="btn btn-primary text-white shadow-md hover:shadow-lg focus:outline-none"
+                disabled={imagens.length === 0 || !imagens.some(i => i.boxes?.length > 0)}
+             >
+                Gravar no Histórico
+             </button>
+             <button 
+                onClick={exportarAnotacoes} 
+                className="btn btn-outline border-gray-300 text-gray-700 hover:bg-gray-100 focus:outline-none"
+                disabled={imagens.length === 0}
+             >
+                Exportar (Outra Pasta)
+             </button>
+             <button 
                 onClick={salvarAnotacoes} 
                 className="btn btn-success text-white shadow-md hover:shadow-lg focus:outline-none"
                 disabled={imagens.length === 0}
              >
-                Salvar Anotações TXT
+                Salvar Padrão
              </button>
          </div>
       </div>
