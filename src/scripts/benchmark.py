@@ -13,25 +13,24 @@ except ImportError:
     print(json.dumps({"error": "Biblioteca 'ultralytics' não instalada no Python."}))
     sys.exit(1)
 
+import tempfile
+
 def create_temp_yaml(images_path):
     """
     Cria um arquivo YAML temporário necessário para a validação do YOLO.
-    O YOLO exige saber onde estão as imagens e as classes.
     """
-    # Ex: datasets/yolo/images -> datasets/yolo
     base_dir = os.path.dirname(images_path.rstrip('/\\'))
     
-    # O YOLO espera que a pasta 'labels' esteja ao lado da pasta 'images'
-    # Se suas imagens estão em .../dataset/images, labels devem estar em .../dataset/labels
-    
     yaml_content = {
-        'path': os.path.abspath(base_dir), # Caminho absoluto da raiz do dataset
+        'path': os.path.abspath(base_dir),
         'train': 'images', 
-        'val': 'images',   # Usamos as mesmas imagens para validar neste benchmark rápido
-        'names': {0: 'cromossomo'} # Ajuste se tiver mais classes
+        'val': 'images',
+        'names': {0: 'cromossomo'}
     }
     
-    yaml_path = os.path.join(base_dir, 'temp_benchmark.yaml')
+    # Salva na pasta TEMP do sistema operacional (ex: /tmp/temp_benchmark.yaml)
+    # Isso impede que o Vite Dev Server veja o arquivo e cause um "page reload" da tela inteira!
+    yaml_path = os.path.join(tempfile.gettempdir(), 'temp_benchmark.yaml')
     
     with open(yaml_path, 'w') as f:
         yaml.dump(yaml_content, f)
@@ -73,7 +72,8 @@ def main():
 
         # 4. Executa a Validação (Calcula mAP, Precision, Recall)
         # verbose=False, plots=False para ser rápido e silencioso
-        metrics = model.val(data=yaml_path, verbose=False, plots=False)
+        # save=False, val=False, project=tempfile.gettempdir() evita o YOLO de gerar pastas /runs e o Vite disparar o page reload da tela.
+        metrics = model.val(data=yaml_path, verbose=False, plots=False, save=False, save_json=False, project=tempfile.gettempdir())
 
         # 5. Formata a Saída
         output = {

@@ -289,16 +289,18 @@ export default function AnaliseCuradoria() {
                  {imagemAtual.boxes.map((box, idx) => (
                      <div
                         key={idx}
-                        className={`absolute border-2 flex items-start justify-end group ${box.manual ? 'border-yellow-400' : 'border-green-500'}`}
+                        className={`absolute border-2 flex items-start justify-end ${box.manual ? 'border-yellow-400' : 'border-green-500'}`}
                         style={{
                            left: box.x, top: box.y, width: box.w, height: box.h,
                            pointerEvents: 'none' 
                         }}
                      >
                         <button 
-                           onClick={(e) => { e.stopPropagation(); removeBox(idx); }} 
+                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeBox(idx); }}
+                           onMouseDown={(e) => e.stopPropagation()}
                            style={{ pointerEvents: 'auto' }}
-                           className="bg-red-500 text-white text-[10px] p-1 font-bold absolute -right-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700 cursor-pointer shadow border border-red-800"
+                           className="bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold absolute -right-2 -top-2 opacity-60 hover:opacity-100 transition-opacity cursor-pointer shadow z-50 pointer-events-auto"
+                           title="Excluir Anotação"
                         >
                            X
                         </button>

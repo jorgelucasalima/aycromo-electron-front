@@ -15,6 +15,7 @@ export default function Benchmark() {
   const [resultados, setResultados] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [progresso, setProgresso] = useState(0);
 
   useEffect(() => {
     // Carregar dados salvos
@@ -38,10 +39,19 @@ export default function Benchmark() {
     setProcessing(true);
     setResultados([]); // Limpa resultados anteriores
     setLogs([]);
+    setProgresso(0);
+
+    let idx = 0;
+    const total = modelos.length;
+
+    if (total === 0) {
+      setProcessing(false);
+      return;
+    }
 
     for (const modelo of modelos) {
       try {
-        setLogs(prev => [...prev, `Testando ${modelo.name}...`]);
+        setLogs(prev => [...prev, `Testando ${modelo.name}... (${idx + 1}/${total})`]);
         
         const metricas = await window.electronAPI.runBenchmarkMetrics({
             modeloPath: (modelo.path === 'default' || modelo.id === 'yolo-v11' || modelo.id === 'yolo-base') ? 'best-yolo11.pt' : modelo.path,
@@ -55,6 +65,9 @@ export default function Benchmark() {
         console.error(err);
         setLogs(prev => [...prev, `Erro em ${modelo.name}: ${err.message}`]);
       }
+
+      idx++;
+      setProgresso((idx / total) * 100);
     }
     
     setProcessing(false);
@@ -119,6 +132,22 @@ export default function Benchmark() {
           </button>
         </div>
 
+        {/* Barra de Progresso */}
+        {processing && (
+          <div className="mb-4 bg-white p-4 rounded-xl shadow border border-gray-200">
+            <div className="flex justify-between text-sm mb-2 text-gray-700 font-semibold">
+              <span>Progresso da Avaliação</span>
+              <span>{Math.round(progresso)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full transition-all duration-300 ease-out" 
+                style={{ width: `${progresso}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto bg-white rounded-xl shadow border">
           <table className="table w-full">
             <thead className="bg-gray-100">
@@ -134,7 +163,7 @@ export default function Benchmark() {
               {resultados.length === 0 ? (
                 <tr><td colSpan="5" className="text-center py-8 text-gray-400">Nenhum teste executado ainda.</td></tr>
               ) : (
-                resultados.sort((a,b) => b.map50 - a.map50).map((res, idx) => (
+                [...resultados].sort((a,b) => (b.map50 || 0) - (a.map50 || 0)).map((res, idx) => (
                   <tr key={idx} className="hover:bg-gray-50">
                     <td className="font-bold">{res.name} {idx===0 && 'Melhor'}</td>
                     <td className="text-green-600 font-bold">{(res.map50 * 100).toFixed(1)}%</td>

@@ -104,25 +104,16 @@ ipcMain.handle('select-images', async () => {
 ipcMain.handle('run-inference', async (event, data) => {
   const { modeloPath, imagens } = data;
   
-  // Detecta a extensão do arquivo para decidir qual motor usar
-  const extensao = path.extname(modeloPath).toLowerCase();
-
-  console.log(`[Inference Manager] Iniciando processamento. Motor: ${extensao === '.onnx' ? 'ONNX (Node.js)' : 'Python (Spawn)'}`);
+  console.log(`[Inference Manager] Iniciando processamento universal no Motor Python. Modelo: ${modeloPath}`);
 
   try {
-    if (extensao === '.pt') {
-      return await runPythonInference(modeloPath, imagens);
-    } 
-    else if (extensao === '.onnx') {
-      return await runOnnxInference(modeloPath, imagens);
-    } 
-    else {
-      // Se for 'default' ou outro, tenta usar Python como fallback padrão
-      return await runPythonInference(modeloPath, imagens);
-    }
+    // O Python via Ultralytics carrega nativamente tanto .pt quanto .onnx, 
+    // lendo os metadados do modelo para descobrir se a imagem precisa ser convertida 
+    // para Preto&Branco e/ou redimensionada para 224x224 automaticamente.
+    return await runPythonInference(modeloPath, imagens);
   } catch (error) {
     console.error("Erro fatal na inferência:", error);
-    throw error; // Repassa o erro para o React exibir o alert
+    throw error;
   }
 });
 
@@ -265,9 +256,8 @@ ipcMain.handle('save-annotations', async (event, annotationsData) => {
 });
 
 
-// --- FUNÇÕES AUXILIARES (MOTORES DE IA) ---
-
-// MOTOR 1: PYTHON (Para arquivos .pt)
+// --- MOTOR ÚNICO: PYTHON ---
+// Carrega arquivos .pt, .onnx nativamente com resize dinâmico
 function runPythonInference(modeloPath, imagens) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
@@ -308,93 +298,6 @@ function runPythonInference(modeloPath, imagens) {
        reject(err.message);
     });
   });
-}
-
-// MOTOR 2: ONNX (Para arquivos .onnx)
-async function runOnnxInference(modeloPath, imagens) {
-  try {
-    const session = await InferenceSession.create(modeloPath);
-    const resultados = {};
-
-    for (const imgPath of imagens) {
-      // Prepara imagem com Sharp
-      const { data } = await sharp(imgPath)
-        .resize(640, 640, { fit: 'fill' })
-        .removeAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-
-      const inputData = new Float32Array(data.length);
-      for (let i = 0; i < data.length; i++) {
-        inputData[i] = data[i] / 255.0;
-      }
-
-      const tensor = new Tensor('float32', inputData, [1, 3, 640, 640]);
-      const output = await session.run({ [session.inputNames[0]]: tensor });
-      const outputTensor = output[session.outputNames[0]];
-
-      const detections = postProcessYOLO(outputTensor, 0.5);
-
-      const details = detections.map(d => ({
-        x: d.bbox[0], y: d.bbox[1], w: d.bbox[2], h: d.bbox[3]
-      }));
-
-      resultados[imgPath] = {
-        count: detections.length,
-        status: "Sucesso (ONNX)",
-        details: details 
-      };
-    }
-    return resultados;
-  } catch (error) {
-    console.error("Erro no ONNX Runtime:", error);
-    throw new Error(`Falha no processamento ONNX: ${error.message}`);
-  }
-}
-
-// --- MATEMÁTICA ONNX ---
-
-function postProcessYOLO(outputTensor, threshold) {
-  const data = outputTensor.data;
-  const cols = outputTensor.dims[2]; // 8400
-  const boxes = [];
-
-  for (let i = 0; i < cols; i++) {
-    const score = data[4 * cols + i]; 
-    if (score > threshold) {
-      const xc = data[0 * cols + i];
-      const yc = data[1 * cols + i];
-      const w = data[2 * cols + i];
-      const h = data[3 * cols + i];
-
-      boxes.push({
-        bbox: [xc - w / 2, yc - h / 2, w, h],
-        score: score
-      });
-    }
-  }
-  return applyNMS(boxes, 0.45);
-}
-
-function applyNMS(boxes, iouThreshold) {
-  boxes.sort((a, b) => b.score - a.score);
-  const result = [];
-  while (boxes.length > 0) {
-    const best = boxes.shift();
-    result.push(best);
-    boxes = boxes.filter(b => iou(best.bbox, b.bbox) < iouThreshold);
-  }
-  return result;
-}
-
-function iou(box1, box2) {
-  const [x1, y1, w1, h1] = box1;
-  const [x2, y2, w2, h2] = box2;
-  const x_overlap = Math.max(0, Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2));
-  const y_overlap = Math.max(0, Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2));
-  const intersection = x_overlap * y_overlap;
-  const union = (w1 * h1) + (w2 * h2) - intersection;
-  return intersection / union;
 }
 
 // --- APP LIFECYCLE ---
