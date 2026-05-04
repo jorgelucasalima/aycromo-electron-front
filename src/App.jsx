@@ -1,7 +1,7 @@
 import './index.css';
 import React, { useState } from 'react';
 import Menu from './components/Menu';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AnexarImagens from './pages/AnexarImagens';
 import Dashboard from './pages/Dashboard';
 import Relatorios from './pages/Relatorios';
@@ -25,7 +25,8 @@ export default function App() {
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/benchmark" element={<Benchmark />} />
-          <Route path='analise' element={<AnaliseCuradoria />} />
+          <Route path="/analise" element={<AnaliseCuradoria />} />
+          <Route path="*" element={<Navigate to="/analise" replace />} />
         </Routes>
       </main>
     </div>
