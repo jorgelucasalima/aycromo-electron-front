@@ -1,0 +1,54 @@
+name: Build Multiplataforma
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build em ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+    - name: Fazer Checkout do Repositório
+      uses: actions/checkout@v4
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Instalar Dependências
+      run: npm ci
+
+    # Opcional: Se houver dependências nativas (como ONNX/Sharp) em plataformas cruzadas, 
+    # as vezes reconstruí-las garante que a arquitetura bate corretamente
+    - name: Rebuild de Dependências Nativas
+      run: npm run make -- --skip-package --skip-make
+      continue-on-error: true
+
+    - name: Compilar e Empacotar (Electron Forge)
+      run: npm run make
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload de Artefatos Gerados
+      uses: actions/upload-artifact@v4
+      with:
+        name: aycromo-build-${{ matrix.os }}
+        path: |
+          out/make/**/*.dmg
+          out/make/**/*.zip
+          out/make/**/*.deb
+          out/make/**/*.exe
+          out/make/**/*.rpm
+          out/make/**/*.AppImage
+        if-no-files-found: warn
