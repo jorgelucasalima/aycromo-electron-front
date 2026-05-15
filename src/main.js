@@ -28,6 +28,11 @@ const createWindow = () => {
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
+
+  // Debug: log renderer console messages to main terminal
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer] ${message} (at ${sourceId}:${line})`);
+  });
 };
 
 // --- IPC HANDLERS ---
