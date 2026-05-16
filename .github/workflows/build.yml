@@ -7,6 +7,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build em ${{ matrix.os }}
@@ -34,7 +37,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload de Artefatos Gerados
+    - name: Upload de Artefatos Gerados (Apenas Backup)
       uses: actions/upload-artifact@v4
       with:
         name: aycromo-build-${{ matrix.os }}
@@ -46,3 +49,20 @@ jobs:
           out/make/**/*.rpm
           out/make/**/*.AppImage
         if-no-files-found: warn
+
+    - name: Publicar Instaladores na Release (Última Versão)
+      uses: softprops/action-gh-release@v2
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        tag_name: "latest"
+        name: "Aycromo - Versão Mais Recente (Automática)"
+        prerelease: true
+        files: |
+          out/make/**/*.dmg
+          out/make/**/*.zip
+          out/make/**/*.deb
+          out/make/**/*.exe
+          out/make/**/*.rpm
+          out/make/**/*.AppImage
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
