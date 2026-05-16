@@ -29,12 +29,6 @@ jobs:
     - name: Instalar Dependências
       run: npm ci
 
-    # Opcional: Se houver dependências nativas (como ONNX/Sharp) em plataformas cruzadas, 
-    # as vezes reconstruí-las garante que a arquitetura bate corretamente
-    - name: Rebuild de Dependências Nativas
-      run: npm run make -- --skip-package --skip-make
-      continue-on-error: true
-
     - name: Compilar e Empacotar (Electron Forge)
       run: npm run make
       env:
