@@ -32,10 +32,33 @@ jobs:
     - name: Instalar Dependências
       run: npm ci
 
+    - name: Recompilar Módulos Nativos para o Electron
+      run: npx electron-rebuild -f -w onnxruntime-node
+
+    - name: Preparar Certificados macOS
+      if: startsWith(matrix.os, 'macos')
+      env:
+        MAC_CERTS: ${{ secrets.MAC_CERTS }}
+        MAC_CERTS_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+      run: |
+        if [ -n "$MAC_CERTS" ]; then
+          echo $MAC_CERTS | base64 --decode > certificate.p12
+          security create-keychain -p actions-password build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions-password build.keychain
+          security import certificate.p12 -k build.keychain -P "$MAC_CERTS_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions-password build.keychain
+        fi
+
     - name: Compilar e Empacotar (Electron Forge)
       run: npm run make
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
     - name: Upload de Artefatos Gerados (Apenas Backup)
       uses: actions/upload-artifact@v4

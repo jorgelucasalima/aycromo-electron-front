@@ -7,6 +7,17 @@ module.exports = {
       unpack: "**/node_modules/{onnxruntime-node,sharp,@img}/**/*"
     },
     icon: 'build/icon',
+    osxSign: {
+      hardenedRuntime: true,
+      entitlements: 'build/entitlements.mac.plist',
+      entitlementsInherit: 'build/entitlements.mac.plist',
+      gatekeeperAssess: false
+    },
+    osxNotarize: (process.env.APPLE_ID && process.env.APPLE_ID_PASSWORD) ? {
+      appleId: process.env.APPLE_ID,
+      appleIdPassword: process.env.APPLE_ID_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID
+    } : undefined
   },
   rebuildConfig: {},
   makers: [
