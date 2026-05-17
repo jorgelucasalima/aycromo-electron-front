@@ -19,6 +19,21 @@ module.exports = {
       teamId: process.env.APPLE_TEAM_ID
     } : undefined
   },
+  hooks: {
+    packageAfterCopy: async (_forgeConfig, buildPath) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const modulesToCopy = ['onnxruntime-node', 'sharp', '@img'];
+      for (const mod of modulesToCopy) {
+        const src = path.join(__dirname, 'node_modules', mod);
+        const dest = path.join(buildPath, 'node_modules', mod);
+        if (fs.existsSync(src)) {
+          fs.cpSync(src, dest, { recursive: true });
+        }
+      }
+    }
+  },
   rebuildConfig: {},
   makers: [
     {
