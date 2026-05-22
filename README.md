@@ -4,16 +4,14 @@ Bem-vindo ao repositório oficial do Aycromo, um aplicativo desktop focado na de
 
 ## 📥 Download da Última Versão
 
-O aplicativo está disponível para Mac, Windows e Ubuntu Linux. As versões são geradas automaticamente na nuvem para garantir a máxima segurança e integridade.
+O aplicativo está disponível oficialmente para **Windows**. As versões são geradas automaticamente na nuvem para garantir a máxima segurança e integridade.
 
 | Plataforma | Status do Lançamento | Link para Download |
 | --- | --- | --- |
-| **🍎 Mac (macOS)** | ✅ Disponível | [Baixar para Mac (DMG / ZIP)](https://github.com/jorgelucasalima/aycromo-electron-front/releases/tag/latest) |
 | **🪟 Windows** | ✅ Disponível | [Baixar para Windows (EXE)](https://github.com/jorgelucasalima/aycromo-electron-front/releases/tag/latest) |
-| **🐧 Linux (Ubuntu)** | ✅ Disponível | [Baixar para Ubuntu (DEB)](https://github.com/jorgelucasalima/aycromo-electron-front/releases/tag/latest) |
 
 > 💡 **Como baixar?**  
-> Clique em qualquer um dos links acima. Você será direcionado para a página da **Última Versão**. Desça até o final da página (na seção **Assets**) e clique no arquivo correspondente ao seu sistema operacional (ex: `.dmg` para Mac, `.exe` para Windows, `.deb` para Ubuntu).
+> Clique no link acima. Você será direcionado para a página da **Última Versão**. Desça até o final da página (na seção **Assets**) e clique no arquivo instalador correspondente (ex: `.exe` para Windows).
 
 ---
 

@@ -6,33 +6,36 @@ module.exports = {
     asar: {
       unpack: "**/node_modules/{onnxruntime-node,sharp,@img}/**/*"
     },
-    icon: 'build/icon',
-    osxSign: {
+    extraResource: [
+      "./src/scripts"
+    ],
+    ignore: (file) => {
+      if (!file) return false;
+      if (['/src', '/package.json'].includes(file)) return false;
+      if (file.startsWith('/.vite')) return false;
+      if (file.startsWith('/node_modules')) return false;
+      if (file.startsWith('/build')) return false;
+      // Ignora para não empacotar no asar, já que vai como extraResource
+      if (file.startsWith('/src/scripts')) return true;
+      if (file.endsWith('.pt') || file.endsWith('.onnx')) return false;
+      
+      if (file.startsWith('/src/') && !file.startsWith('/src/scripts')) return true;
+      if (/^\/(\.github|\.git|dist|out|runs)/.test(file)) return true;
+      if (/^\/[^\/]+\.(js|ts|mjs|json|md|yaml)$/.test(file) && file !== '/package.json') return true;
+      
+      return false;
+    },
+    osxSign: process.env.APPLE_ID ? {
       hardenedRuntime: true,
       entitlements: 'build/entitlements.mac.plist',
       entitlementsInherit: 'build/entitlements.mac.plist',
       gatekeeperAssess: false
-    },
+    } : undefined,
     osxNotarize: (process.env.APPLE_ID && process.env.APPLE_ID_PASSWORD) ? {
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_ID_PASSWORD,
       teamId: process.env.APPLE_TEAM_ID
     } : undefined
-  },
-  hooks: {
-    packageAfterCopy: async (_forgeConfig, buildPath) => {
-      const fs = require('fs');
-      const path = require('path');
-      
-      const modulesToCopy = ['onnxruntime-node', 'sharp', '@img'];
-      for (const mod of modulesToCopy) {
-        const src = path.join(__dirname, 'node_modules', mod);
-        const dest = path.join(buildPath, 'node_modules', mod);
-        if (fs.existsSync(src)) {
-          fs.cpSync(src, dest, { recursive: true });
-        }
-      }
-    }
   },
   rebuildConfig: {},
   makers: [

@@ -2,8 +2,6 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { spawn } from 'child_process';
-import { InferenceSession, Tensor } from 'onnxruntime-node'; // Motor ONNX
-import sharp from 'sharp'; // Processamento de Imagem para ONNX
 import fs from 'fs';
 
 // Impede múltiplas instâncias durante a instalação no Windows
@@ -29,14 +27,22 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
+  mainWindow.webContents.openDevTools();
+
   // Debug: log renderer console messages to main terminal
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message} (at ${sourceId}:${line})`);
   });
 };
 
-// --- IPC HANDLERS ---
+const getScriptPath = (scriptName) => {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'scripts', scriptName);
+  }
+  return path.join(app.getAppPath(), 'src', 'scripts', scriptName);
+};
 
+// --- IPC HANDLERS ---
 /**
  * 1. Importação de Modelos (.pt ou .onnx)
  */
@@ -169,7 +175,7 @@ ipcMain.handle('run-benchmark-metrics', async (event, data) => {
   const { modeloPath, datasetPath } = data;
   
   const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-  const scriptPath = path.join(app.getAppPath(), 'src/scripts/benchmark.py');
+  const scriptPath = getScriptPath('benchmark.py');
 
   console.log(`[Benchmark] Iniciando teste...`);
   console.log(` - Modelo: ${modeloPath}`);
@@ -308,7 +314,7 @@ ipcMain.handle('export-annotations', async (event, annotationsData) => {
 function runPythonInference(modeloPath, imagens) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-    const scriptPath = path.join(app.getAppPath(), 'src/scripts/detect_chromosomes.py');
+    const scriptPath = getScriptPath('detect_chromosomes.py');
 
     const pythonProcess = spawn(pythonCommand, [
       scriptPath,
