@@ -13,7 +13,8 @@
     "make:linux": "electron-forge make --platform linux",
     "make:all": "electron-forge make --platform darwin,linux,win32",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "echo \"No linting configured\"",
+    "build:python": "node package-python.js"
   },
   "keywords": [],
   "author": {

@@ -31,6 +31,19 @@ jobs:
     - name: Recompilar Módulos Nativos para o Electron
       run: npx electron-rebuild -f -w onnxruntime-node
 
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Instalar Dependências do Python e PyInstaller
+      run: |
+        pip install ultralytics onnxruntime opencv-python
+        pip install pyinstaller
+
+    - name: Compilar Scripts Python
+      run: npm run build:python
+
     - name: Compilar e Empacotar (Electron Forge)
       run: npm run make
       env:

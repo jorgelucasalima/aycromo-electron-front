@@ -38,6 +38,12 @@ const createWindow = () => {
 };
 
 const getScriptPath = (scriptName) => {
+  // Se for Windows e estiver empacotado, usamos o binário compilado pelo PyInstaller
+  if (app.isPackaged && process.platform === 'win32') {
+    const exeName = scriptName.replace('.py', '.exe');
+    return path.join(process.resourcesPath, 'scripts', 'bin', exeName);
+  }
+  
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'scripts', scriptName);
   }
@@ -176,19 +182,19 @@ ipcMain.handle('list-files', async (event, relativePath) => {
 ipcMain.handle('run-benchmark-metrics', async (event, data) => {
   const { modeloPath, datasetPath } = data;
   
-  const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
   const scriptPath = getScriptPath('benchmark.py');
 
+  const isWindowsExe = scriptPath.endsWith('.exe');
+  const command = isWindowsExe ? scriptPath : (process.platform === 'win32' ? 'python' : 'python3');
+  const spawnArgs = isWindowsExe ? [modeloPath, datasetPath] : [scriptPath, modeloPath, datasetPath];
+
   console.log(`[Benchmark] Iniciando teste...`);
+  console.log(` - Comando: ${command}`);
   console.log(` - Modelo: ${modeloPath}`);
   console.log(` - Dataset: ${datasetPath}`);
 
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn(pythonCommand, [
-      scriptPath,
-      modeloPath,
-      datasetPath
-    ]);
+    const pythonProcess = spawn(command, spawnArgs);
 
     let stdoutData = "";
     let stderrData = "";
@@ -315,14 +321,13 @@ ipcMain.handle('export-annotations', async (event, annotationsData) => {
 // Carrega arquivos .pt, .onnx nativamente com resize dinâmico
 function runPythonInference(modeloPath, imagens) {
   return new Promise((resolve, reject) => {
-    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
     const scriptPath = getScriptPath('detect_chromosomes.py');
 
-    const pythonProcess = spawn(pythonCommand, [
-      scriptPath,
-      modeloPath,
-      ...imagens
-    ]);
+    const isWindowsExe = scriptPath.endsWith('.exe');
+    const command = isWindowsExe ? scriptPath : (process.platform === 'win32' ? 'python' : 'python3');
+    const spawnArgs = isWindowsExe ? [modeloPath, ...imagens] : [scriptPath, modeloPath, ...imagens];
+
+    const pythonProcess = spawn(command, spawnArgs);
 
     let stdoutData = "";
     let stderrData = "";
