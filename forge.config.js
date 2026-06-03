@@ -35,7 +35,10 @@ module.exports = {
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_ID_PASSWORD,
       teamId: process.env.APPLE_TEAM_ID
-    } : undefined
+    } : undefined,
+    windowsSign: {
+      signWithParams: `/tr http://timestamp.acs.microsoft.com /td sha256 /fd sha256 /a`
+    }
   },
   rebuildConfig: {},
   makers: [
