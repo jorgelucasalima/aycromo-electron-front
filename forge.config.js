@@ -7,7 +7,8 @@ module.exports = {
       unpack: "**/node_modules/{onnxruntime-node,sharp,@img}/**/*"
     },
     extraResource: [
-      "./src/scripts"
+      "./src/scripts",
+      "./best-yolo11.pt"
     ],
     ignore: (file) => {
       if (!file) return false;
@@ -17,7 +18,7 @@ module.exports = {
       if (file.startsWith('/build')) return false;
       // Ignora para não empacotar no asar, já que vai como extraResource
       if (file.startsWith('/src/scripts')) return true;
-      if (file.endsWith('.pt') || file.endsWith('.onnx')) return false;
+      if (file.endsWith('.pt') || file.endsWith('.onnx')) return true;
       
       if (file.startsWith('/src/') && !file.startsWith('/src/scripts')) return true;
       if (/^\/(\.github|\.git|dist|out|runs)/.test(file)) return true;

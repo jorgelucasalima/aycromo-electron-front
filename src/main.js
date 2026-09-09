@@ -50,6 +50,15 @@ const getScriptPath = (scriptName) => {
   return path.join(app.getAppPath(), 'src', 'scripts', scriptName);
 };
 
+const resolveModelPath = (modeloPath) => {
+  if (path.isAbsolute(modeloPath)) return modeloPath;
+  
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, modeloPath);
+  }
+  return path.join(app.getAppPath(), modeloPath);
+};
+
 // --- IPC HANDLERS ---
 /**
  * 1. Importação de Modelos (.pt ou .onnx)
@@ -183,14 +192,15 @@ ipcMain.handle('run-benchmark-metrics', async (event, data) => {
   const { modeloPath, datasetPath } = data;
   
   const scriptPath = getScriptPath('benchmark.py');
+  const finalModelPath = resolveModelPath(modeloPath);
 
   const isWindowsExe = scriptPath.endsWith('.exe');
   const command = isWindowsExe ? scriptPath : (process.platform === 'win32' ? 'python' : 'python3');
-  const spawnArgs = isWindowsExe ? [modeloPath, datasetPath] : [scriptPath, modeloPath, datasetPath];
+  const spawnArgs = isWindowsExe ? [finalModelPath, datasetPath] : [scriptPath, finalModelPath, datasetPath];
 
   console.log(`[Benchmark] Iniciando teste...`);
   console.log(` - Comando: ${command}`);
-  console.log(` - Modelo: ${modeloPath}`);
+  console.log(` - Modelo (Resolvido): ${finalModelPath}`);
   console.log(` - Dataset: ${datasetPath}`);
 
   return new Promise((resolve, reject) => {
@@ -322,10 +332,11 @@ ipcMain.handle('export-annotations', async (event, annotationsData) => {
 function runPythonInference(modeloPath, imagens) {
   return new Promise((resolve, reject) => {
     const scriptPath = getScriptPath('detect_chromosomes.py');
+    const finalModelPath = resolveModelPath(modeloPath);
 
     const isWindowsExe = scriptPath.endsWith('.exe');
     const command = isWindowsExe ? scriptPath : (process.platform === 'win32' ? 'python' : 'python3');
-    const spawnArgs = isWindowsExe ? [modeloPath, ...imagens] : [scriptPath, modeloPath, ...imagens];
+    const spawnArgs = isWindowsExe ? [finalModelPath, ...imagens] : [scriptPath, finalModelPath, ...imagens];
 
     const pythonProcess = spawn(command, spawnArgs);
 
