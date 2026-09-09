@@ -56,7 +56,7 @@ jobs:
       with:
         name: aycromo-build-windows
         path: |
-          out/make/**/*.exe
+          out/make/**/*.zip
         if-no-files-found: warn
 
     - name: Publicar Instaladores na Release (Última Versão)
@@ -67,7 +67,7 @@ jobs:
         name: "Aycromo - Versão Mais Recente (Automática)"
         prerelease: true
         files: |
-          out/make/**/*.exe
+          out/make/**/*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
