@@ -8,10 +8,11 @@ O aplicativo está disponível oficialmente para **Windows**. As versões são g
 
 | Plataforma | Status do Lançamento | Link para Download |
 | --- | --- | --- |
-| **🪟 Windows** | ✅ Disponível | [Baixar para Windows (EXE)](https://github.com/jorgelucasalima/aycromo-electron-front/releases/tag/latest) |
+| **🪟 Windows** | ✅ Disponível | [Baixar para Windows (ZIP)](https://github.com/jorgelucasalima/aycromo-electron-front/releases/tag/latest) |
 
-> 💡 **Como baixar?**  
-> Clique no link acima. Você será direcionado para a página da **Última Versão**. Desça até o final da página (na seção **Assets**) e clique no arquivo instalador correspondente (ex: `.exe` para Windows).
+> 💡 **Como rodar?**  
+> Clique no link acima. Você será direcionado para a página da **Última Versão**. Desça até o final da página (na seção **Assets**) e clique no arquivo correspondente (ex: `.zip` para Windows).
+> Após baixar, clique com o botão direito no arquivo `.zip`, escolha **"Extrair Tudo"**, abra a pasta extraída e dê dois cliques no arquivo `aycromo.exe` (não requer instalação!).
 
 ---
 
@@ -38,7 +39,7 @@ Se você deseja rodar o projeto localmente:
 ### 📦 Compilação Local
 Caso precise gerar os instaladores na sua própria máquina (apenas recomendado para a plataforma em que você está operando atualmente):
 ```bash
-npm run make:mac   # Compila instalador para macOS
-npm run make:win   # Compila instalador para Windows (requer wine e mono se for executado no Mac)
+npm run make:mac   # Compila pacote .zip e DMG para macOS
+npm run make:win   # Compila pacote .zip executável para Windows
 npm run make:linux # Compila pacote .deb para distribuições baseadas no Debian/Ubuntu
 ```
