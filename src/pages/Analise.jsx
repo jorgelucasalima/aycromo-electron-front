@@ -105,7 +105,7 @@ export default function AnaliseCuradoria() {
 
     } catch (e) {
       console.error(e);
-      alert("Erro na análise.");
+      alert("Erro na análise.", error, error.message);
     } finally {
       setProcessing(false);
     }
