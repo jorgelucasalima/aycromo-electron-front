@@ -340,25 +340,29 @@ function runPythonInference(modeloPath, imagens) {
 
     const pythonProcess = spawn(command, spawnArgs);
 
-    let stdoutData = "";
-    let stderrData = "";
+    const stdoutChunks = [];
+    const stderrChunks = [];
 
-    pythonProcess.stdout.on('data', (d) => stdoutData += d.toString());
-    pythonProcess.stderr.on('data', (d) => stderrData += d.toString());
+    pythonProcess.stdout.on('data', (d) => stdoutChunks.push(d));
+    pythonProcess.stderr.on('data', (d) => stderrChunks.push(d));
 
     pythonProcess.on('close', (code) => {
+      const stdoutData = Buffer.concat(stdoutChunks).toString('utf8');
+      const stderrData = Buffer.concat(stderrChunks).toString('utf8');
+      
       if (code === 0) {
         try {
-          const jsonStartIndex = stdoutData.indexOf('{');
-          if (jsonStartIndex !== -1) {
-             const jsonStr = stdoutData.substring(jsonStartIndex); 
+          const startIndex = stdoutData.lastIndexOf('___JSON_START___');
+          const endIndex = stdoutData.lastIndexOf('___JSON_END___');
+          if (startIndex !== -1 && endIndex !== -1) {
+             const jsonStr = stdoutData.substring(startIndex + '___JSON_START___'.length, endIndex).trim();
              resolve(JSON.parse(jsonStr));
           } else {
-             reject("Resposta vazia do Python (Nenhum JSON encontrado).");
+             reject("Resposta vazia do Python (Nenhum JSON encontrado). Log: " + stdoutData);
           }
         } catch (err) {
-          console.error("Falha ao parsear JSON do Python:", stdoutData);
-          reject(`Saída inválida do Python.`);
+          console.error(`Falha ao parsear JSON do Python. Erro: ${err.message}`);
+          reject(`Saída inválida do Python. Erro: ${err.message}`);
         }
       } else {
         reject(`Erro no script Python (Código ${code}): ${stderrData}`);

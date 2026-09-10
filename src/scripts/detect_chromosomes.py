@@ -160,7 +160,10 @@ def main():
                 }
 
         # IMPRIME APENAS O JSON FINAL (Importante!)
+        print("___JSON_START___")
         print(json.dumps(results_dict))
+        print("___JSON_END___")
+        sys.stdout.flush()
 
     except Exception as e:
         sys.stderr.write(f"Erro durante a inferência: {str(e)}")

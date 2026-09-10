@@ -244,7 +244,10 @@ def main():
             os.remove(yaml_path)
 
         # 7. Retorna o JSON final
+        print("___JSON_START___")
         print(json.dumps(output))
+        print("___JSON_END___")
+        sys.stdout.flush()
 
     except Exception as e:
         # Captura qualquer erro do Python e retorna como JSON de erro
