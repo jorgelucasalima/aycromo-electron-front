@@ -15,13 +15,32 @@ console.log('Iniciando compilação do Python com PyInstaller...');
 try {
   // Compila detect_chromosomes.py
   console.log('Compilando detect_chromosomes.py...');
-  execSync(`pyinstaller --noconfirm --onefile --console --distpath "${binDir}" --workpath "${path.join(__dirname, 'build', 'pyinstaller-work')}" "${path.join(scriptsDir, 'detect_chromosomes.py')}"`, { stdio: 'inherit' });
+  const pyinstallerArgs = [
+    '--noconfirm',
+    '--onefile',
+    '--console',
+    '--collect-data ultralytics',
+    '--copy-metadata ultralytics',
+    '--copy-metadata torch',
+    '--copy-metadata tqdm',
+    '--copy-metadata requests',
+    '--copy-metadata packaging',
+    '--copy-metadata filelock',
+    '--copy-metadata pyyaml',
+    '--copy-metadata py-cpuinfo',
+    '--hidden-import ultralytics',
+    '--hidden-import onnxruntime',
+    '--hidden-import cv2',
+    '--hidden-import numpy'
+  ].join(' ');
+  
+  execSync(`pyinstaller ${pyinstallerArgs} --distpath "${binDir}" --workpath "${path.join(__dirname, 'build', 'pyinstaller-work')}" "${path.join(scriptsDir, 'detect_chromosomes.py')}"`, { stdio: 'inherit' });
 
   // Compila benchmark.py (se existir)
   const benchmarkPath = path.join(scriptsDir, 'benchmark.py');
   if (fs.existsSync(benchmarkPath)) {
     console.log('Compilando benchmark.py...');
-    execSync(`pyinstaller --noconfirm --onefile --console --distpath "${binDir}" --workpath "${path.join(__dirname, 'build', 'pyinstaller-work')}" "${benchmarkPath}"`, { stdio: 'inherit' });
+    execSync(`pyinstaller ${pyinstallerArgs} --distpath "${binDir}" --workpath "${path.join(__dirname, 'build', 'pyinstaller-work')}" "${benchmarkPath}"`, { stdio: 'inherit' });
   }
 
   console.log('Compilação concluída com sucesso!');

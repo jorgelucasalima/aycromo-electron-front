@@ -66,6 +66,12 @@ def main():
         except Exception as e_yolo:
             # TENTATIVA 2: ONNXRUNTIME CUSTOMIZADO PARA MODELOS NÃO-YOLO (Ex: Faster R-CNN)
             # Se falhou, provavelmente porque as dimensões exigidas ou a topologia da rede são puras
+            
+            # Se for .pt, não faz sentido tentar ONNX
+            if model_path.endswith('.pt'):
+                sys.stderr.write(f"Erro ao carregar modelo YOLO (.pt): {str(e_yolo)}\n")
+                sys.exit(1)
+                
             import onnxruntime as ort
             import cv2
             import numpy as np
