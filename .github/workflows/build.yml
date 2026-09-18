@@ -38,7 +38,7 @@ jobs:
 
     - name: Instalar Dependências do Python e PyInstaller
       run: |
-        pip install ultralytics onnxruntime opencv-python py-cpuinfo
+        pip install ultralytics onnxruntime opencv-python py-cpuinfo torch tqdm requests packaging filelock pyyaml
         pip install pyinstaller
 
     - name: Compilar Scripts Python
